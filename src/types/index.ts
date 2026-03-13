@@ -1,10 +1,17 @@
-export type UserRole = "sales" | "engineer" | "manager";
+export type RoleCode = "sales" | "engineer" | "manager" | "admin";
+export type DepartmentName = "sales" | "tech_office";
+
+export interface Department {
+  id: string;
+  name: DepartmentName;
+}
 
 export interface UserProfile {
   id: string;
   email: string;
   name: string;
-  role: UserRole;
+  department: Department;
+  roles: RoleCode[];
 }
 
 export interface Task {
@@ -39,4 +46,12 @@ export interface DocumentMeta {
 export interface SignedUploadUrl {
   signed_url: string;
   document_id: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  status: string;
+  timestamp: string;
+  user_name?: string;
+  note?: string;
 }
