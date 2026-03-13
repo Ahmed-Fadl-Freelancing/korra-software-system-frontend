@@ -1,14 +1,15 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserRole } from "@/types";
+import { DepartmentName } from "@/types";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  roles?: UserRole[];
+  roles?: string[];
+  department?: DepartmentName;
 }
 
-export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
-  const { session, user, loading } = useAuth();
+export function ProtectedRoute({ children, roles, department }: ProtectedRouteProps) {
+  const { session, user, loading, hasRole, hasDepartment, departmentName } = useAuth();
 
   if (loading) {
     return (
@@ -20,8 +21,14 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
 
   if (!session) return <Navigate to="/login" replace />;
 
-  if (roles && user && !roles.includes(user.role)) {
-    return <Navigate to="/app/inbox" replace />;
+  if (department && !hasDepartment(department)) {
+    const fallback = departmentName === "tech_office" ? "/app/tech" : "/app/sales";
+    return <Navigate to={fallback} replace />;
+  }
+
+  if (roles && user && !roles.some((r) => hasRole(r))) {
+    const fallback = departmentName === "tech_office" ? "/app/tech" : "/app/sales";
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;

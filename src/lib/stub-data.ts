@@ -37,13 +37,22 @@ export const stubTasks: Task[] = [
     priority: "low",
     assigned_to: "me",
   },
+  {
+    id: "5",
+    title: "Contact client for clarification",
+    opportunity_name: "Highway Bridge Renovation",
+    status: "pending",
+    due_date: "2026-03-16",
+    priority: "medium",
+    assigned_to: "me",
+  },
 ];
 
 export const stubOpportunities: Opportunity[] = [
   {
     id: "opp-1",
     project_name: "Highway Bridge Renovation",
-    email_body: "Request for structural assessment...",
+    email_body: "Request for structural assessment and bearing selection...",
     contractor: "BuildCo Ltd",
     owner: "Ministry of Transport",
     consultant: "EngConsult GmbH",
@@ -57,12 +66,25 @@ export const stubOpportunities: Opportunity[] = [
   {
     id: "opp-2",
     project_name: "Commercial Building Project",
-    email_body: "New commercial building tender...",
+    email_body: "New commercial building tender requiring expansion joints...",
     contractor: "Apex Construction",
     owner: "Metro Properties",
     consultant: "Urban Design Inc",
     status: "draft",
     created_at: "2026-03-05",
     documents: [],
+  },
+  {
+    id: "opp-3",
+    project_name: "Residential Complex Phase 2",
+    email_body: "Phase 2 of the residential complex requiring seismic bearings...",
+    contractor: "HomeBuilder Corp",
+    owner: "City Housing Authority",
+    consultant: "Structural Solutions Ltd",
+    status: "in_review",
+    created_at: "2026-03-08",
+    documents: [
+      { id: "doc-3", filename: "seismic_report.pdf", uploaded_at: "2026-03-09" },
+    ],
   },
 ];

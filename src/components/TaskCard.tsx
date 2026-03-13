@@ -1,42 +1,44 @@
-import { CalendarDays, AlertCircle } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CalendarDays, AlertCircle, Clock, CheckCircle2, XOctagon } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Task } from "@/types";
 
-const priorityColors: Record<Task["priority"], string> = {
-  low: "bg-muted text-muted-foreground",
-  medium: "bg-primary/10 text-primary",
-  high: "bg-warning/10 text-warning",
-  urgent: "bg-destructive/10 text-destructive",
+const priorityConfig: Record<Task["priority"], { class: string; label: string }> = {
+  low: { class: "bg-muted text-muted-foreground", label: "Low" },
+  medium: { class: "bg-primary/10 text-primary", label: "Medium" },
+  high: { class: "bg-warning/10 text-warning", label: "High" },
+  urgent: { class: "bg-destructive/10 text-destructive", label: "Urgent" },
 };
 
-const statusLabels: Record<Task["status"], string> = {
-  pending: "Pending",
-  in_progress: "In Progress",
-  completed: "Completed",
-  blocked: "Blocked",
+const statusConfig: Record<Task["status"], { icon: React.ComponentType<{ className?: string }>; label: string }> = {
+  pending: { icon: Clock, label: "Pending" },
+  in_progress: { icon: AlertCircle, label: "In Progress" },
+  completed: { icon: CheckCircle2, label: "Completed" },
+  blocked: { icon: XOctagon, label: "Blocked" },
 };
 
 export function TaskCard({ task }: { task: Task }) {
+  const priority = priorityConfig[task.priority];
+  const status = statusConfig[task.status];
+  const StatusIcon = status.icon;
+
   return (
-    <Card className="transition-shadow hover:shadow-sm">
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <CardTitle className="text-sm font-medium">{task.title}</CardTitle>
-          <Badge variant="outline" className={priorityColors[task.priority]}>
-            {task.priority}
+    <Card className="transition-all hover:shadow-md hover:border-primary/20">
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="text-sm font-semibold leading-tight">{task.title}</h3>
+          <Badge variant="secondary" className={`shrink-0 text-[10px] ${priority.class}`}>
+            {priority.label}
           </Badge>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
         <p className="text-xs text-muted-foreground">{task.opportunity_name}</p>
-        <div className="flex items-center justify-between text-xs">
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <AlertCircle className="h-3 w-3" />
-            {statusLabels[task.status]}
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <StatusIcon className="h-3.5 w-3.5" />
+            {status.label}
           </span>
-          <span className="flex items-center gap-1 text-muted-foreground">
-            <CalendarDays className="h-3 w-3" />
+          <span className="flex items-center gap-1">
+            <CalendarDays className="h-3.5 w-3.5" />
             {new Date(task.due_date).toLocaleDateString()}
           </span>
         </div>
