@@ -1,0 +1,9 @@
+django>=5.1,<6
+djangorestframework>=3.15,<4
+django-cors-headers>=4.4,<5
+dj-database-url>=2.2,<3
+python-dotenv>=1.0,<2
+PyJWT>=2.9,<3
+requests>=2.32,<3
+gunicorn>=22,<23
+psycopg2-binary>=2.9,<3

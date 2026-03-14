@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { toast } from "@/hooks/use-toast";
 
 const DJANGO_API_BASE = import.meta.env.VITE_DJANGO_API_BASE_URL || "http://localhost:8000";
 
@@ -8,9 +9,16 @@ class ApiClient {
     return data.session?.access_token ?? null;
   }
 
+  private async refreshAndGetToken(): Promise<string | null> {
+    const { data, error } = await supabase.auth.refreshSession();
+    if (error || !data.session) return null;
+    return data.session.access_token;
+  }
+
   async request<T = unknown>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    _isRetry = false
   ): Promise<T> {
     const token = await this.getToken();
     if (!token) {
@@ -27,6 +35,22 @@ class ApiClient {
       },
     });
 
+    if (res.status === 401 && !_isRetry) {
+      const newToken = await this.refreshAndGetToken();
+      if (newToken) {
+        return this.request<T>(path, {
+          ...options,
+          headers: {
+            ...options.headers,
+            Authorization: `Bearer ${newToken}`,
+          },
+        }, true);
+      }
+      await supabase.auth.signOut();
+      window.location.href = "/login";
+      throw new Error("Unauthorized");
+    }
+
     if (res.status === 401) {
       await supabase.auth.signOut();
       window.location.href = "/login";
@@ -35,7 +59,11 @@ class ApiClient {
 
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`API error ${res.status}: ${body}`);
+      const errMsg = `API error ${res.status}: ${body}`;
+      if (res.status !== 404) {
+        toast({ title: "Request failed", description: `Error ${res.status}`, variant: "destructive" });
+      }
+      throw new Error(errMsg);
     }
 
     return res.json();
@@ -70,7 +98,6 @@ class ApiClient {
     return this.request<T>(path, { method: "DELETE" });
   }
 
-  /** Upload file to a signed URL (PUT with raw body) */
   async uploadToSignedUrl(signedUrl: string, file: File): Promise<void> {
     const res = await fetch(signedUrl, {
       method: "PUT",

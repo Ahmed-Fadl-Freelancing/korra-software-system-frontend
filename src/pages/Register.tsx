@@ -5,23 +5,59 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Layers, Lock, Mail } from "lucide-react";
+import { Layers, Lock, Mail, ArrowLeft } from "lucide-react";
 
 const ALLOW_REGISTER = import.meta.env.VITE_ALLOW_SELF_REGISTER === "true";
 
-export default function Login() {
+export default function Register() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  if (!ALLOW_REGISTER) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm border-0 shadow-lg">
+          <CardHeader className="text-center space-y-3 pb-2">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <Layers className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-xl font-bold">Registration Disabled</CardTitle>
+              <CardDescription className="text-xs">
+                Self-registration is not available. Contact your administrator to create an account.
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Link to="/login">
+              <Button variant="outline" className="w-full gap-2">
+                <ArrowLeft className="h-4 w-4" /> Back to Login
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirm) {
+      setError("Passwords do not match");
+      return;
+    }
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/app` },
+    });
 
     if (error) {
       setError(error.message);
@@ -29,7 +65,7 @@ export default function Login() {
       return;
     }
 
-    navigate("/app");
+    navigate("/app/onboarding");
   };
 
   return (
@@ -40,12 +76,12 @@ export default function Login() {
             <Layers className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-xl font-bold">Welcome back</CardTitle>
+            <CardTitle className="text-xl font-bold">Create Account</CardTitle>
             <CardDescription className="text-xs">Sales & Tech Office Platform</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs font-medium">Email</Label>
               <div className="relative">
@@ -59,19 +95,25 @@ export default function Login() {
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9" required />
+                  placeholder="Min 6 characters" className="pl-9" required minLength={6} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm" className="text-xs font-medium">Confirm Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input id="confirm" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)}
+                  className="pl-9" required minLength={6} />
               </div>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in…" : "Sign In"}
+              {loading ? "Creating account…" : "Create Account"}
             </Button>
-            {ALLOW_REGISTER && (
-              <p className="text-center text-xs text-muted-foreground">
-                Don't have an account?{" "}
-                <Link to="/register" className="text-primary hover:underline">Register</Link>
-              </p>
-            )}
+            <p className="text-center text-xs text-muted-foreground">
+              Already have an account?{" "}
+              <Link to="/login" className="text-primary hover:underline">Sign in</Link>
+            </p>
           </form>
         </CardContent>
       </Card>
