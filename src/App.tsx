@@ -7,9 +7,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DepartmentRedirect } from "@/components/DepartmentRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "@/pages/Login";
-import Register from "@/pages/Register";
-import Onboarding from "@/pages/Onboarding";
-import AccessDenied from "@/pages/AccessDenied";
 import Inbox from "@/pages/Inbox";
 import CreateOpportunity from "@/pages/CreateOpportunity";
 import OpportunityDetail from "@/pages/OpportunityDetail";
@@ -30,9 +27,6 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/app/onboarding" element={<Onboarding />} />
-            <Route path="/access-denied" element={<AccessDenied />} />
             <Route path="/" element={<Navigate to="/app" replace />} />
 
             <Route
@@ -50,15 +44,22 @@ const App = () => (
               <Route path="opportunities/:id" element={<OpportunityDetail />} />
 
               {/* Sales */}
-              <Route path="sales" element={<ProtectedRoute department="sales"><SalesDashboard /></ProtectedRoute>} />
-              <Route path="offers" element={<ProtectedRoute department="sales"><PlaceholderPage title="Offers" description="Manage and track offer documents sent to clients." /></ProtectedRoute>} />
-              <Route path="outcomes" element={<ProtectedRoute department="sales"><PlaceholderPage title="Outcomes" description="Track awarded and lost opportunities." /></ProtectedRoute>} />
+              <Route path="sales" element={<SalesDashboard />} />
+              <Route path="offers" element={<PlaceholderPage title="Offers" description="Manage and track offer documents sent to clients." />} />
+              <Route path="outcomes" element={<PlaceholderPage title="Outcomes" description="Track awarded and lost opportunities." />} />
 
               {/* Tech Office */}
-              <Route path="tech" element={<ProtectedRoute department="tech_office"><TechDashboard /></ProtectedRoute>} />
-              <Route path="engineering" element={<ProtectedRoute department="tech_office" roles={["engineer", "manager"]}><Engineering /></ProtectedRoute>} />
-              <Route path="shortlists" element={<ProtectedRoute department="tech_office"><PlaceholderPage title="Model Shortlists" description="View and manage shortlisted models for opportunities." /></ProtectedRoute>} />
-              <Route path="pricing" element={<ProtectedRoute department="tech_office"><PlaceholderPage title="Pricing Queue" description="Opportunities awaiting pricing calculations." /></ProtectedRoute>} />
+              <Route path="tech" element={<TechDashboard />} />
+              <Route
+                path="engineering"
+                element={
+                  <ProtectedRoute roles={["engineer", "manager"]}>
+                    <Engineering />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="shortlists" element={<PlaceholderPage title="Model Shortlists" description="View and manage shortlisted models for opportunities." />} />
+              <Route path="pricing" element={<PlaceholderPage title="Pricing Queue" description="Opportunities awaiting pricing calculations." />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

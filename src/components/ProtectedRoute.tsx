@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, roles, department }: ProtectedRouteProps) {
-  const { session, user, loading, profileStatus, departmentName } = useAuth();
+  const { session, user, loading, hasRole, hasDepartment, departmentName } = useAuth();
 
   if (loading) {
     return (
@@ -21,14 +21,14 @@ export function ProtectedRoute({ children, roles, department }: ProtectedRoutePr
 
   if (!session) return <Navigate to="/login" replace />;
 
-  if (profileStatus === "not_found") return <Navigate to="/app/onboarding" replace />;
-
-  if (department && departmentName !== department) {
-    return <Navigate to="/access-denied" replace />;
+  if (department && !hasDepartment(department)) {
+    const fallback = departmentName === "tech_office" ? "/app/tech" : "/app/sales";
+    return <Navigate to={fallback} replace />;
   }
 
-  if (roles && user && !roles.some((r) => user.roles?.includes(r as any))) {
-    return <Navigate to="/access-denied" replace />;
+  if (roles && user && !roles.some((r) => hasRole(r))) {
+    const fallback = departmentName === "tech_office" ? "/app/tech" : "/app/sales";
+    return <Navigate to={fallback} replace />;
   }
 
   return <>{children}</>;

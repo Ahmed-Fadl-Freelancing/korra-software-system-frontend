@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Layers, Lock, Mail } from "lucide-react";
-
-const ALLOW_REGISTER = import.meta.env.VITE_ALLOW_SELF_REGISTER === "true";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -50,28 +48,37 @@ export default function Login() {
               <Label htmlFor="email" className="text-xs font-medium">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@company.com" className="pl-9" required />
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="pl-9"
+                  required
+                />
               </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password" className="text-xs font-medium">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  className="pl-9" required />
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-9"
+                  required
+                />
               </div>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && (
+              <p className="text-sm text-destructive">{error}</p>
+            )}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in…" : "Sign In"}
             </Button>
-            {ALLOW_REGISTER && (
-              <p className="text-center text-xs text-muted-foreground">
-                Don't have an account?{" "}
-                <Link to="/register" className="text-primary hover:underline">Register</Link>
-              </p>
-            )}
           </form>
         </CardContent>
       </Card>
