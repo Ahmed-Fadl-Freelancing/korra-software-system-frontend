@@ -5,21 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Layers, Lock, Mail } from "lucide-react";
+import { Layers, Mail, Lock, UserPlus } from "lucide-react";
 
-export default function Login() {
+export default function Signup() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
 
     if (error) {
       setError(error.message);
@@ -27,7 +36,12 @@ export default function Login() {
       return;
     }
 
-    navigate("/app");
+    if (data.session) {
+      navigate("/app");
+    } else {
+      setError("Please check your email for a confirmation link.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,15 +49,26 @@ export default function Login() {
       <Card className="w-full max-w-sm border-0 shadow-lg">
         <CardHeader className="text-center space-y-3 pb-2">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Layers className="h-6 w-6 text-primary" />
+            <UserPlus className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <CardTitle className="text-xl font-bold">Welcome back</CardTitle>
-            <CardDescription className="text-xs">Sales & Tech Office Platform</CardDescription>
+            <CardTitle className="text-xl font-bold">Create an account</CardTitle>
+            <CardDescription className="text-xs">Join Korra Software System</CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSignup} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className="text-xs font-medium">Full Name</Label>
+              <Input
+                id="fullName"
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="John Doe"
+                required
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs font-medium">Email</Label>
               <div className="relative">
@@ -77,12 +102,12 @@ export default function Login() {
               <p className="text-sm text-destructive">{error}</p>
             )}
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in…" : "Sign In"}
+              {loading ? "Creating account…" : "Sign Up"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
-                Sign up
+              Already have an account?{" "}
+              <Link to="/login" className="text-primary hover:underline">
+                Sign in
               </Link>
             </p>
           </form>

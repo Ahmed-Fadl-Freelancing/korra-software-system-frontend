@@ -81,9 +81,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setSession(null);
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+      // Explicitly clear any items that might be cached or stuck
+      localStorage.removeItem("sb-" + import.meta.env.VITE_SUPABASE_URL.split("//")[1].split(".")[0] + "-auth-token");
+      localStorage.clear(); // Nuclear option for logout safety
+    } catch (error) {
+      console.error("SignOut error:", error);
+    } finally {
+      setSession(null);
+      setUser(null);
+      window.location.href = "/login";
+    }
   };
 
   const hasDepartment = (dept: DepartmentName) => user?.department.name === dept;
