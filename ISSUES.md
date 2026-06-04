@@ -5,6 +5,29 @@
 
 ---
 
+## Brand Identity & Design System
+
+**Company card palette: Blue · White · Silver**
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| Primary (Blue) | `#1E3A8A` (Tailwind `blue-900`) | Buttons, active nav, links, badges |
+| Primary-light | `#3B82F6` (Tailwind `blue-500`) | Hover states, highlights, charts |
+| Surface (White) | `#FFFFFF` | Card backgrounds, modals |
+| Surface-muted | `#F8FAFC` (Tailwind `slate-50`) | Page background |
+| Silver/Border | `#CBD5E1` (Tailwind `slate-300`) | Borders, dividers, skeleton |
+| Silver-dark | `#94A3B8` (Tailwind `slate-400`) | Muted text, sub-labels |
+| Text-primary | `#0F172A` (Tailwind `slate-950`) | Headings |
+| Text-muted | `#64748B` (Tailwind `slate-500`) | Body / description text |
+
+**Rules:**
+- Cards must use white background with a silver (`slate-200`) border — never a colored background.
+- Primary action buttons always use the blue (`blue-800` / `blue-900`) palette.
+- Sidebar active items use `blue-50` background with `blue-700` text.
+- Avoid warm colors (red/orange/yellow) except for destructive actions and status indicators.
+
+---
+
 ## How to Use
 - **Frontend dev:** implement all `[FE]` tagged issues.
 - **Backend dev:** implement all `[BE]` tagged issues.

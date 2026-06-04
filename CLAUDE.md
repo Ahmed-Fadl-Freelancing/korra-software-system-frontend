@@ -1,6 +1,6 @@
-# GitHub Copilot Instructions — Korra Frontend (Copilot reads this)
+# CLAUDE.md — Korra Frontend (Claude reads this)
 
-> **Body is kept IDENTICAL to `CLAUDE.md`.**
+> **Body is kept IDENTICAL to `.github/copilot-instructions.md`.**
 > When you change AI rules, update **both** files so Claude and Copilot share the same rulebook.
 > Cross-repo roadmap lives in `PROGRESS.md` (must be identical in both repos).
 

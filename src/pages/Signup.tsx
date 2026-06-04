@@ -1,29 +1,27 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Mail, Lock, UserPlus } from "lucide-react";
+import { Mail, Lock, UserPlus, CheckCircle } from "lucide-react";
 
 export default function Signup() {
-  const navigate = useNavigate();
   const { signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setInfo(null);
 
-    const { error, needsConfirmation } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName);
 
     if (error) {
       setError(error.message);
@@ -31,14 +29,33 @@ export default function Signup() {
       return;
     }
 
-    if (needsConfirmation) {
-      setInfo("Account created! Please check your email to confirm before signing in.");
-      setLoading(false);
-      return;
-    }
-
-    navigate("/app");
+    // Always show success screen — never auto-navigate
+    setDone(true);
+    setLoading(false);
   };
+
+  if (done) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-sm border-0 shadow-lg text-center">
+          <CardHeader className="space-y-3">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </div>
+            <CardTitle className="text-xl font-bold">Account created!</CardTitle>
+            <CardDescription className="text-sm">
+              Please check your email and confirm your address before signing in.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+              <Link to="/login">Go to Sign In</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -97,10 +114,7 @@ export default function Signup() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            {info && (
-              <p className="text-sm text-green-600">{info}</p>
-            )}
-            <Button type="submit" className="w-full" disabled={loading || !!info}>
+            <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Creating account…" : "Sign Up"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
