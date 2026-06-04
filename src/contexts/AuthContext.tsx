@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Session } from "@supabase/supabase-js";
+import { Session, AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { apiClient } from "@/lib/api-client";
 import { UserProfile, DepartmentName } from "@/types";
@@ -9,6 +9,8 @@ interface AuthState {
   user: UserProfile | null;
   loading: boolean;
   isStubMode: boolean;
+  signIn: (email: string, password: string) => Promise<AuthError | null>;
+  signUp: (email: string, password: string, fullName: string) => Promise<{ error: AuthError | null; needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
   hasDepartment: (dept: DepartmentName) => boolean;
   hasRole: (role: string) => boolean;
@@ -21,6 +23,8 @@ const AuthContext = createContext<AuthState>({
   user: null,
   loading: true,
   isStubMode: false,
+  signIn: async () => null,
+  signUp: async () => ({ error: null, needsConfirmation: false }),
   signOut: async () => {},
   hasDepartment: () => false,
   hasRole: () => false,
@@ -80,6 +84,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return error;
+  };
+
+  const signUp = async (email: string, password: string, fullName: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+    return { error, needsConfirmation: !error && !data.session };
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -101,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const departmentName = user?.department.name ?? null;
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, isStubMode, signOut, hasDepartment, hasRole, isManager, departmentName }}>
+    <AuthContext.Provider value={{ session, user, loading, isStubMode, signIn, signUp, signOut, hasDepartment, hasRole, isManager, departmentName }}>
       {children}
     </AuthContext.Provider>
   );

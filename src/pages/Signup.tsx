@@ -1,34 +1,29 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Layers, Mail, Lock, UserPlus } from "lucide-react";
+import { Mail, Lock, UserPlus } from "lucide-react";
 
 export default function Signup() {
   const navigate = useNavigate();
+  const { signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setInfo(null);
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
+    const { error, needsConfirmation } = await signUp(email, password, fullName);
 
     if (error) {
       setError(error.message);
@@ -36,12 +31,13 @@ export default function Signup() {
       return;
     }
 
-    if (data.session) {
-      navigate("/app");
-    } else {
-      setError("Please check your email for a confirmation link.");
+    if (needsConfirmation) {
+      setInfo("Account created! Please check your email to confirm before signing in.");
       setLoading(false);
+      return;
     }
+
+    navigate("/app");
   };
 
   return (
@@ -101,7 +97,10 @@ export default function Signup() {
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {info && (
+              <p className="text-sm text-green-600">{info}</p>
+            )}
+            <Button type="submit" className="w-full" disabled={loading || !!info}>
               {loading ? "Creating account…" : "Sign Up"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">

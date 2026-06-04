@@ -4,14 +4,14 @@
 - [ ] KOR-27: Project Scaffold (React + Vite + Tailwind)
 - [ ] Documentation: Project Flow & Implementation Plan
 
-## Milestone 2: Auth & Foundation (In-Progress)
-- [ ] KOR-53: [FEAT] Auth Foundation — Supabase, Registry, Login, Logout, Guards
-  - [ ] Integrate @supabase/supabase-js
-  - [in-progress] Implement AuthContext (SignIn, SignUp, SignOut)
-  - [ ] Handle token clearing on SignOut
-  - [ ] API client interceptor (attach JWT)
-  - [ ] Build Login & Signup pages
-  - [ ] Implement ProtectedRoute/RoleGuard
+## Milestone 2: Auth & Foundation (In Review)
+- [r] KOR-53: [FEAT] Auth Foundation — Supabase, Registry, Login, Logout, Guards
+  - [x] Integrate @supabase/supabase-js
+  - [x] Implement AuthContext (signIn, signUp, signOut)
+  - [x] signOut clears localStorage JWT keys
+  - [x] API client interceptor (attach JWT)
+  - [x] Build Login & Signup pages
+  - [x] Implement ProtectedRoute/RoleGuard
 - [ ] KOR-54: [FEAT] App Layout — Sidebar, Topbar, Navigation
   - [ ] Sidebar with role-based filtering
   - [ ] Topbar with Profile/Logout
