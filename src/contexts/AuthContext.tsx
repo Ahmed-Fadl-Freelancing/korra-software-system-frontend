@@ -85,25 +85,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error;
+    try {
+      const response = await apiClient.post<{ access_token: string; refresh_token: string }>("/auth/login", { email, password });
+      
+      // Sync local Supabase client so Storage/Realtime work
+      const { error } = await supabase.auth.setSession({
+        access_token: response.access_token,
+        refresh_token: response.refresh_token,
+      });
+
+      if (error) throw error;
+      return null;
+    } catch (error: any) {
+      console.error("Login error:", error);
+      return { message: error.message || "Login failed" } as AuthError;
+    }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: fullName } },
-    });
-    return { error, needsConfirmation: !error && !data.session };
+    try {
+      const response = await apiClient.post<{ access_token?: string; refresh_token?: string }>("/auth/signup", {
+        email,
+        password,
+        full_name: fullName,
+      });
+
+      // If backend logs in immediately
+      if (response.access_token && response.refresh_token) {
+        await supabase.auth.setSession({
+          access_token: response.access_token,
+          refresh_token: response.refresh_token,
+        });
+        return { error: null, needsConfirmation: false };
+      }
+
+      return { error: null, needsConfirmation: true };
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      return { error: { message: error.message || "Signup failed" } as AuthError, needsConfirmation: false };
+    }
   };
 
   const signOut = async () => {
     try {
+      // Notify backend if needed
+      await apiClient.post("/auth/logout").catch(() => {});
+      
       await supabase.auth.signOut();
       // Explicitly clear any items that might be cached or stuck
-      localStorage.removeItem("sb-" + import.meta.env.VITE_SUPABASE_URL.split("//")[1].split(".")[0] + "-auth-token");
-      localStorage.clear(); // Nuclear option for logout safety
+      localStorage.clear();
     } catch (error) {
       console.error("SignOut error:", error);
     } finally {

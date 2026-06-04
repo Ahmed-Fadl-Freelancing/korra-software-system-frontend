@@ -41,7 +41,7 @@
 | [BE] | KOR-114 | `POST /auth/login` — password grant, relays Supabase tokens | 🔧 In Review (PR #2) |
 | [BE] | KOR-115 | `POST /auth/logout` — revoke Supabase session | 🔧 In Review (PR #2) |
 | [BE] | KOR-116 | `POST /auth/refresh` — refresh-token grant | 🔧 In Review (PR #2) |
-| [FE] | KOR-53 | Auth foundation — Supabase JWT, `AuthContext`, `/me` hydration | ✅ Done (per handover) |
+| [FE] | KOR-53 | Auth foundation — Backend Proxy (`/auth/*`), `AuthContext`, `/me` hydration | 🔧 In Review |
 | [FE] | KOR-54 | App layout support | 🔲 Todo (per handover) |
 
 > **Architecture note:** Django never mints its own JWT. The `/auth/*` endpoints

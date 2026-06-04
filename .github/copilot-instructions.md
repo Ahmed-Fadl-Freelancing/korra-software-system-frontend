@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions — Korra Frontend (Copilot reads this)
 
-> **Body is kept IDENTICAL to `CLAUDE.md`.**
+> **Body is kept IDENTICAL to `.github/copilot-instructions.md`.**
 > When you change AI rules, update **both** files so Claude and Copilot share the same rulebook.
 > Cross-repo roadmap lives in `PROGRESS.md` (must be identical in both repos).
 
@@ -81,3 +81,11 @@ React 18, Vite 5, TypeScript 5, Tailwind CSS 3, Shadcn UI, React Router 6, React
 - Never process PDFs on the frontend.
 - Never hardcode `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, or any secret.
 - **Never merge a PR** — wait for the human reviewer.
+
+## 🚨 IMPORTANT: NO DIRECT SUPABASE AUTH
+The frontend must NEVER call `supabase.auth.signInWithPassword` or `supabase.auth.signUp` directly.
+All authentication requests must go through the **Backend (Django proxy)** endpoints:
+- `POST /auth/login`
+- `POST /auth/signup`
+- `POST /auth/logout`
+The `AuthContext` is responsible for calling these and syncing the returned tokens with the local Supabase client.

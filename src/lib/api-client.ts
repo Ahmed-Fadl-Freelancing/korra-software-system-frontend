@@ -12,19 +12,26 @@ class ApiClient {
     path: string,
     options: RequestInit = {}
   ): Promise<T> {
-    const token = await this.getToken();
-    if (!token) {
-      window.location.href = "/login";
-      throw new Error("Not authenticated");
+    // Auth endpoints are public (no Bearer token yet or handled differently)
+    const isAuthPath = path.startsWith("/auth/");
+    
+    let headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    if (!isAuthPath) {
+      const token = await this.getToken();
+      if (!token) {
+        window.location.href = "/login";
+        throw new Error("Not authenticated");
+      }
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     const res = await fetch(`${DJANGO_API_BASE}${path}`, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
+      headers,
     });
 
     if (res.status === 401) {
