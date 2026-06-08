@@ -15,6 +15,25 @@
 
 ---
 
+## 🚨 NO SUPABASE IN FRONTEND — EVER
+
+The frontend does **NOT** import `@supabase/supabase-js`, does **NOT** create a Supabase client, and does **NOT** call any Supabase SDK methods.
+
+**The only service the frontend talks to is the Django backend:**
+```
+VITE_DJANGO_API_BASE_URL=http://localhost:8000
+```
+
+All auth flows go through:
+- `POST /auth/login`    → `{email, password}` → `200 {access_token, refresh_token, ...}`
+- `POST /auth/signup`   → `{email, password, full_name}` → `201 {user, session?}`
+- `POST /auth/refresh`  → `{refresh_token}` → `200 {access_token, ...}`
+- `POST /auth/logout`   → `Authorization: Bearer <jwt>` → `204`
+
+Tokens are stored **only** in `localStorage` under keys `korra_access_token` and `korra_refresh_token`, managed exclusively by `api-client.ts`.
+
+---
+
 ## Session Start — Mandatory Checklist
 
 1. Read `PROGRESS.md` → find **▶ NEXT UP**. If it is tagged `[BE]`, note it but work on the `[FE]` item.
@@ -47,9 +66,9 @@
 
 | Layer | Detail |
 |-------|--------|
-| Auth | Supabase JWT. `AuthContext` exposes `signIn`, `signUp`, `signOut`. `signOut` calls `supabase.auth.signOut()` + clears `localStorage`. |
-| API | `api-client.ts` — attaches `Authorization: Bearer <JWT>` to every Django request. Falls back to stub if backend unavailable. |
-| Routing | `ProtectedRoute` (session guard) + `RoleGuard` (role guard). Never trust JWT claims for role — use `/me` response. |
+| Auth | Django proxy only. `AuthContext` calls backend `/auth/*`. Tokens in `localStorage`. |
+| API | `api-client.ts` — reads `korra_access_token` from localStorage, attaches `Authorization: Bearer` to every protected Django request. Auto-refreshes on 401. |
+| Routing | `ProtectedRoute` checks `isAuthenticated` from `AuthContext`. `RoleGuard` uses `/me` response — never JWT claims. |
 | State | React Query for server state. React context for auth only. |
 | UI | Shadcn UI components. **Blue + White + Silver palette.** See `ISSUES.md` → Brand Identity. |
 
@@ -70,22 +89,18 @@
 
 ## Frontend Stack
 
-React 18, Vite 5, TypeScript 5, Tailwind CSS 3, Shadcn UI, React Router 6, React Query, Supabase JS, Zod, Lucide React.
+React 18, Vite 5, TypeScript 5, Tailwind CSS 3, Shadcn UI, React Router 6, React Query, Zod, Lucide React.
+
+**Not in stack:** `@supabase/supabase-js` is not used on the frontend.
 
 ---
 
 ## Hard "Never Do" List
 
-- Never call Supabase APIs directly from pages — go through `AuthContext` or `apiClient`.
-- Never store the JWT in a custom `localStorage` key — Supabase SDK manages it.
+- **Never** import `@supabase/supabase-js` or `src/lib/supabase.ts` in any component or page.
+- **Never** call any Supabase SDK method from the frontend.
+- **Never** add `VITE_SUPABASE_URL` or `VITE_SUPABASE_ANON_KEY` to `.env`.
+- Never store the JWT in any key other than `korra_access_token` / `korra_refresh_token`.
 - Never process PDFs on the frontend.
-- Never hardcode `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, or any secret.
+- Never hardcode any secret or credential.
 - **Never merge a PR** — wait for the human reviewer.
-
-## 🚨 IMPORTANT: NO DIRECT SUPABASE AUTH
-The frontend must NEVER call `supabase.auth.signInWithPassword` or `supabase.auth.signUp` directly.
-All authentication requests must go through the **Backend (Django proxy)** endpoints:
-- `POST /auth/login`
-- `POST /auth/signup`
-- `POST /auth/logout`
-The `AuthContext` is responsible for calling these and syncing the returned tokens with the local Supabase client.
