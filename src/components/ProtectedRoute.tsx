@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, roles, department }: ProtectedRouteProps) {
-  const { session, user, loading, hasRole, hasDepartment, departmentName } = useAuth();
+  const { isAuthenticated, user, loading, hasRole, hasDepartment, departmentName } = useAuth();
 
   if (loading) {
     return (
@@ -19,15 +19,18 @@ export function ProtectedRoute({ children, roles, department }: ProtectedRoutePr
     );
   }
 
-  if (!session) return <Navigate to="/login" replace />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // Department not yet assigned — waiting for admin activation
+  if (!user?.department) return <Navigate to="/pending" replace />;
 
   if (department && !hasDepartment(department)) {
-    const fallback = departmentName === "tech_office" ? "/app/tech" : "/app/sales";
+    const fallback = departmentName === "Tech Office" ? "/app/tech" : "/app/sales";
     return <Navigate to={fallback} replace />;
   }
 
   if (roles && user && !roles.some((r) => hasRole(r))) {
-    const fallback = departmentName === "tech_office" ? "/app/tech" : "/app/sales";
+    const fallback = departmentName === "Tech Office" ? "/app/tech" : "/app/sales";
     return <Navigate to={fallback} replace />;
   }
 
