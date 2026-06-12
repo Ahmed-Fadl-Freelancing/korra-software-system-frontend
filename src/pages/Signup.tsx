@@ -30,6 +30,7 @@ export default function Signup() {
     fullName: "",
     email: "",
     password: "",
+    confirmPassword: "",
     jobTitle: "" as JobTitleLevel | "",
     department: "" as DepartmentName | "",
   });
@@ -43,6 +44,10 @@ export default function Signup() {
     e.preventDefault();
     if (!form.jobTitle || !form.department) {
       setError("Please select a job title and department.");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
     setLoading(true);
@@ -188,6 +193,32 @@ export default function Signup() {
               </div>
             </div>
 
+            {/* Confirm Password */}
+            <div className="space-y-1.5">
+              <Label htmlFor="confirmPassword" className="text-xs font-medium text-slate-700">
+                Confirm Password
+              </Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={(e) => update("confirmPassword", e.target.value)}
+                  placeholder="Re-enter your password"
+                  className={`pl-9 ${
+                    form.confirmPassword && form.password !== form.confirmPassword
+                      ? "border-red-400 focus-visible:ring-red-400"
+                      : ""
+                  }`}
+                  required
+                />
+              </div>
+              {form.confirmPassword && form.password !== form.confirmPassword && (
+                <p className="text-xs text-red-500">Passwords do not match</p>
+              )}
+            </div>
+
             {error && (
               <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
                 {error}
@@ -196,7 +227,7 @@ export default function Signup() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || (!!form.confirmPassword && form.password !== form.confirmPassword)}
               className="w-full bg-blue-800 hover:bg-blue-900 text-white"
             >
               {loading ? "Creating account…" : "Create Account"}
