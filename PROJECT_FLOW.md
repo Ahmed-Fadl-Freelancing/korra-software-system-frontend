@@ -66,21 +66,33 @@ serialisers must match these exactly (case-sensitive).
 
 ### 2.1 Signup
 
-1. User fills: `email`, `password`, `full_name`, `job_title` on `/signup`.
+1. User fills: `email`, `password`, `confirm_password`, `full_name`, `job_title`, `department` on `/signup`.
 2. Frontend calls `POST /auth/signup` → Django proxies to Supabase GoTrue.
-3. Django passes `full_name` + `job_title` as metadata (`data` field) to GoTrue.
+3. Django passes `full_name`, `job_title`, `department` as metadata (`data` field) to GoTrue.
 4. Supabase creates `auth.users` with metadata in `raw_user_meta_data`.
 5. **PostgreSQL trigger** fires on INSERT → auto-creates `public.user_profiles`:
    - `user_id` = `auth.users.id`
    - `employee_code` = `EMP-` + first 6 chars of UUID uppercased (auto-generated)
    - `full_name` = from `raw_user_meta_data->>'full_name'`
-   - `job_title` = from `raw_user_meta_data->>'job_title'` (cast to `job_title_level` enum)
-   - `department_id` = NULL
+   - `job_title` = from `raw_user_meta_data->>'job_title'`
+   - `department_id` = looked up from `raw_user_meta_data->>'department'`
    - `is_active` = true
-6. Supabase sends confirmation email.
-7. Frontend shows "Check your email" screen. No auto-redirect.
 
-> **Admin assigns `department_id` and roles** after user confirms email.
+#### ⚠️ Email Verification — CURRENTLY BYPASSED
+
+> **Status: OFF** — Supabase free tier allows only 2 confirmation emails/hour,
+> making local testing impractical.
+>
+> **Current behaviour:** Supabase returns `access_token` + `refresh_token` directly
+> on signup. Frontend consumes them immediately → user lands on their dashboard
+> without a separate login step.
+>
+> **To re-enable when ready:**
+> 1. In Supabase dashboard → Authentication → Settings → turn ON **"Enable email confirmations"**.
+> 2. In `src/contexts/AuthContext.tsx` → `signUp()` → remove the `if (data.access_token)` block.
+> 3. The existing `needsConfirmation=true` path redirects to `/login` with a "check email" banner.
+
+> **Admin assigns `department_id` and roles** after user confirms email (when verification is ON).
 > Until department is set, `GET /me` returns `department: null` → frontend shows `/pending`.
 
 ### 2.2 Login

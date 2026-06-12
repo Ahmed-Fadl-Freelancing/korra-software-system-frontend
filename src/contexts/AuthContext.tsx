@@ -101,14 +101,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Backend proxies to Supabase GoTrue; full_name, job_title, department go
       // into raw_user_meta_data so the DB trigger can seed user_profiles.
-      await apiClient.post("/auth/signup", {
-        email,
-        password,
-        full_name: fullName,
-        job_title: jobTitle,
-        department,
-      });
-      // Supabase requires email confirmation — no tokens returned yet.
+      const data = await apiClient.post<{ access_token?: string; refresh_token?: string }>(
+        "/auth/signup",
+        { email, password, full_name: fullName, job_title: jobTitle, department }
+      );
+
+      // EMAIL VERIFICATION BYPASSED (Supabase free tier — 2 emails/hour limit).
+      // When Supabase "Enable email confirmations" is OFF, GoTrue returns tokens
+      // immediately. We consume them here so the user lands directly on their
+      // dashboard without a separate login step.
+      //
+      // TO RE-ENABLE EMAIL VERIFICATION:
+      //   1. Turn ON "Enable email confirmations" in Supabase Auth settings.
+      //   2. Remove the if-block below (or comment it out).
+      //   3. The needsConfirmation=true branch will take over automatically.
+      if (data.access_token) {
+        apiClient.setTokens(data.access_token, data.refresh_token);
+        await fetchUserProfile();
+        return { error: null, needsConfirmation: false };
+      }
+
+      // Email confirmation required — no tokens yet.
       return { error: null, needsConfirmation: true };
     } catch (err: any) {
       return { error: { message: err.message || "Signup failed" }, needsConfirmation: false };

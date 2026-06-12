@@ -53,7 +53,7 @@ export default function Signup() {
     setLoading(true);
     setError(null);
 
-    const { error } = await signUp(
+    const { error, needsConfirmation } = await signUp(
       form.email,
       form.password,
       form.fullName,
@@ -67,9 +67,13 @@ export default function Signup() {
       return;
     }
 
-    // Signup successful — Supabase sends confirmation email.
-    // Redirect to login; user must confirm email before they can sign in.
-    navigate("/login", { state: { signedUp: true } });
+    if (needsConfirmation) {
+      // Email verification ON — user must confirm before signing in.
+      navigate("/login", { state: { signedUp: true } });
+    } else {
+      // Email verification OFF (bypassed) — tokens already set, go straight to app.
+      navigate("/app");
+    }
   };
 
   return (
