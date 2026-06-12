@@ -1,27 +1,56 @@
-import { supabase } from "./supabase";
+const API_BASE = import.meta.env.VITE_DJANGO_API_BASE_URL || "http://localhost:8000";
 
-const DJANGO_API_BASE = import.meta.env.VITE_DJANGO_API_BASE_URL || "http://localhost:8000";
+export const TOKEN_KEYS = {
+  ACCESS: "korra_access_token",
+  REFRESH: "korra_refresh_token",
+} as const;
 
 class ApiClient {
-  private async getToken(): Promise<string | null> {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
+  getAccessToken(): string | null {
+    return localStorage.getItem(TOKEN_KEYS.ACCESS);
+  }
+
+  setTokens(access: string, refresh?: string) {
+    localStorage.setItem(TOKEN_KEYS.ACCESS, access);
+    if (refresh) localStorage.setItem(TOKEN_KEYS.REFRESH, refresh);
+  }
+
+  clearTokens() {
+    localStorage.removeItem(TOKEN_KEYS.ACCESS);
+    localStorage.removeItem(TOKEN_KEYS.REFRESH);
+  }
+
+  private async tryRefresh(): Promise<boolean> {
+    const refresh = localStorage.getItem(TOKEN_KEYS.REFRESH);
+    if (!refresh) return false;
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      this.setTokens(data.access_token, data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async request<T = unknown>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    _retry = true
   ): Promise<T> {
-    // Auth endpoints are public (no Bearer token yet or handled differently)
     const isAuthPath = path.startsWith("/auth/");
-    
-    let headers: Record<string, string> = {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...(options.headers as Record<string, string> || {}),
     };
 
     if (!isAuthPath) {
-      const token = await this.getToken();
+      const token = this.getAccessToken();
       if (!token) {
         window.location.href = "/login";
         throw new Error("Not authenticated");
@@ -29,13 +58,19 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${DJANGO_API_BASE}${path}`, {
-      ...options,
-      headers,
-    });
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+    // Auto-refresh on 401 (once)
+    if (res.status === 401 && !isAuthPath && _retry) {
+      const refreshed = await this.tryRefresh();
+      if (refreshed) return this.request<T>(path, options, false);
+      this.clearTokens();
+      window.location.href = "/login";
+      throw new Error("Session expired");
+    }
 
     if (res.status === 401) {
-      await supabase.auth.signOut();
+      this.clearTokens();
       window.location.href = "/login";
       throw new Error("Unauthorized");
     }
@@ -45,6 +80,7 @@ class ApiClient {
       throw new Error(`API error ${res.status}: ${body}`);
     }
 
+    if (res.status === 204) return undefined as T;
     return res.json();
   }
 
@@ -77,7 +113,6 @@ class ApiClient {
     return this.request<T>(path, { method: "DELETE" });
   }
 
-  /** Upload file to a signed URL (PUT with raw body) */
   async uploadToSignedUrl(signedUrl: string, file: File): Promise<void> {
     const res = await fetch(signedUrl, {
       method: "PUT",
