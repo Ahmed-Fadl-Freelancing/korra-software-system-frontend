@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
-import { apiClient } from "@/lib/api-client";
+import { apiClient, ApiAuthError } from "@/lib/api-client";
 import { UserProfile, DepartmentName, JobTitleLevel } from "@/types";
 
 interface AuthError {
@@ -53,25 +53,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isStubMode, setIsStubMode] = useState(false);
 
-  const fetchUserProfile = useCallback(async () => {
+  /**
+   * Fetches the user profile from GET /me.
+   *
+   * @param stubOnNetworkError - When true (on app mount / session restore), a
+   *   network-level failure falls back to stub so engineers can work without a
+   *   running backend. Auth errors (401/403) always throw — stub mode should
+   *   never hide a real authentication failure.
+   */
+  const fetchUserProfile = useCallback(async (stubOnNetworkError = false) => {
     try {
       const profile = await apiClient.get<UserProfile>("/me");
       setUser(profile);
       setIsAuthenticated(true);
       setIsStubMode(false);
-    } catch {
-      console.warn("Backend /me unavailable — using stub profile");
-      setUser(STUB_USER);
-      setIsAuthenticated(true);
-      setIsStubMode(true);
+    } catch (err: unknown) {
+      // ApiAuthError = 401/403/no-token — a real auth failure, never use stub
+      if (err instanceof ApiAuthError) {
+        throw err;
+      }
+      // Network / backend-down errors
+      if (stubOnNetworkError) {
+        console.warn("Backend /me unreachable — using stub profile for dev");
+        setUser(STUB_USER);
+        setIsAuthenticated(true);
+        setIsStubMode(true);
+      } else {
+        throw err;
+      }
     }
   }, []);
 
-  // On mount: if a token exists in localStorage, validate it via /me
+  // On mount: if a token exists, validate it via GET /me
   useEffect(() => {
     const token = apiClient.getAccessToken();
     if (token) {
-      fetchUserProfile().finally(() => setLoading(false));
+      fetchUserProfile(true).catch(() => {
+        // Auth error from GET /me — token is invalid/expired, stay logged out
+        apiClient.clearTokens();
+        setIsAuthenticated(false);
+        setUser(null);
+      }).finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
@@ -83,10 +105,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         "/auth/login",
         { email, password }
       );
+
+      if (!data.access_token) {
+        return { message: "Login succeeded but no token was returned. Please try again." };
+      }
+
       apiClient.setTokens(data.access_token, data.refresh_token);
-      await fetchUserProfile();
+
+      // stubOnNetworkError=false here: a 401 on /me means something is genuinely
+      // wrong (bad token, missing /me endpoint), so surface it as a login error.
+      await fetchUserProfile(false);
       return null;
     } catch (err: any) {
+      // Clean up any tokens we may have stored if profile fetch failed
+      if (err instanceof ApiAuthError) {
+        apiClient.clearTokens();
+        return { message: "Login succeeded but your session could not be loaded. Please try again." };
+      }
       return { message: err.message || "Login failed" };
     }
   };
@@ -101,23 +136,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       // Backend proxies to Supabase GoTrue; full_name, job_title, department go
       // into raw_user_meta_data so the DB trigger can seed user_profiles.
-      const data = await apiClient.post<{ access_token?: string; refresh_token?: string }>(
+      // Django returns: { user: <goTrueResponse>, session: null, message: "..." }
+      const data = await apiClient.post<{
+        user: { access_token?: string; refresh_token?: string } | null;
+        session: null;
+        message: string;
+      }>(
         "/auth/signup",
         { email, password, full_name: fullName, job_title: jobTitle, department }
       );
 
       // EMAIL VERIFICATION BYPASSED (Supabase free tier — 2 emails/hour limit).
-      // When Supabase "Enable email confirmations" is OFF, GoTrue returns tokens
-      // immediately. We consume them here so the user lands directly on their
-      // dashboard without a separate login step.
+      // When Supabase "Enable email confirmations" is OFF, GoTrue returns a full
+      // session inside `data.user`. We consume it so the user lands on their
+      // dashboard immediately.
       //
       // TO RE-ENABLE EMAIL VERIFICATION:
       //   1. Turn ON "Enable email confirmations" in Supabase Auth settings.
       //   2. Remove the if-block below (or comment it out).
-      //   3. The needsConfirmation=true branch will take over automatically.
-      if (data.access_token) {
-        apiClient.setTokens(data.access_token, data.refresh_token);
-        await fetchUserProfile();
+      //   3. The needsConfirmation=true branch takes over automatically.
+      if (data.user?.access_token) {
+        apiClient.setTokens(data.user.access_token, data.user.refresh_token);
+        await fetchUserProfile(false);
         return { error: null, needsConfirmation: false };
       }
 

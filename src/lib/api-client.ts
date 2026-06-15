@@ -5,14 +5,29 @@ export const TOKEN_KEYS = {
   REFRESH: "korra_refresh_token",
 } as const;
 
+export class ApiAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ApiAuthError";
+  }
+}
+
 class ApiClient {
   getAccessToken(): string | null {
-    return localStorage.getItem(TOKEN_KEYS.ACCESS);
+    const val = localStorage.getItem(TOKEN_KEYS.ACCESS);
+    // Guard against "null" / "undefined" strings stored by accident
+    if (!val || val === "null" || val === "undefined") return null;
+    return val;
   }
 
-  setTokens(access: string, refresh?: string) {
-    localStorage.setItem(TOKEN_KEYS.ACCESS, access);
-    if (refresh) localStorage.setItem(TOKEN_KEYS.REFRESH, refresh);
+  setTokens(access: string | null | undefined, refresh?: string | null) {
+    // Only store real non-empty strings — never store null / undefined / "null"
+    if (access && access !== "null" && access !== "undefined") {
+      localStorage.setItem(TOKEN_KEYS.ACCESS, access);
+    }
+    if (refresh && refresh !== "null" && refresh !== "undefined") {
+      localStorage.setItem(TOKEN_KEYS.REFRESH, refresh);
+    }
   }
 
   clearTokens() {
@@ -22,7 +37,7 @@ class ApiClient {
 
   private async tryRefresh(): Promise<boolean> {
     const refresh = localStorage.getItem(TOKEN_KEYS.REFRESH);
-    if (!refresh) return false;
+    if (!refresh || refresh === "null" || refresh === "undefined") return false;
     try {
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: "POST",
@@ -52,27 +67,25 @@ class ApiClient {
     if (!isAuthPath) {
       const token = this.getAccessToken();
       if (!token) {
-        window.location.href = "/login";
-        throw new Error("Not authenticated");
+        // Throw — ProtectedRoute handles the redirect to /login, not us
+        throw new ApiAuthError("No access token");
       }
       headers["Authorization"] = `Bearer ${token}`;
     }
 
     const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
 
-    // Auto-refresh on 401 (once)
+    // Auto-refresh on 401 (once, non-auth paths only)
     if (res.status === 401 && !isAuthPath && _retry) {
       const refreshed = await this.tryRefresh();
       if (refreshed) return this.request<T>(path, options, false);
       this.clearTokens();
-      window.location.href = "/login";
-      throw new Error("Session expired");
+      throw new ApiAuthError("Session expired");
     }
 
     if (res.status === 401) {
       this.clearTokens();
-      window.location.href = "/login";
-      throw new Error("Unauthorized");
+      throw new ApiAuthError("Unauthorized");
     }
 
     if (!res.ok) {
@@ -81,7 +94,7 @@ class ApiClient {
         const body = await res.json();
         message = body.detail ?? body.message ?? body.error ?? message;
       } catch {
-        // body wasn't JSON — keep the generic message
+        // body wasn't JSON — keep generic message
       }
       throw new Error(message);
     }
