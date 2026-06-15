@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Layers, Lock, Mail, CheckCircle } from "lucide-react";
+import { Layers, Lock, Mail, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -90,9 +90,10 @@ export default function Login() {
             </div>
 
             {error && (
-              <p className="rounded-md bg-red-50 border border-red-100 px-3 py-2 text-sm text-red-600">
-                {error}
-              </p>
+              <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
             )}
 
             <Button

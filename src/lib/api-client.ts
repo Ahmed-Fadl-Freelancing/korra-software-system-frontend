@@ -76,8 +76,14 @@ class ApiClient {
     }
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`API error ${res.status}: ${body}`);
+      let message = `Something went wrong (${res.status})`;
+      try {
+        const body = await res.json();
+        message = body.detail ?? body.message ?? body.error ?? message;
+      } catch {
+        // body wasn't JSON — keep the generic message
+      }
+      throw new Error(message);
     }
 
     if (res.status === 204) return undefined as T;

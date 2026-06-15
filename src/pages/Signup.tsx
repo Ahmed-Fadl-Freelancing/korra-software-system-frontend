@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Lock, User, Briefcase, Building2 } from "lucide-react";
+import { Mail, Lock, User, Briefcase, Building2, AlertCircle } from "lucide-react";
 
 const JOB_TITLES: JobTitleLevel[] = [
   "Junior Engineer",
@@ -224,9 +224,10 @@ export default function Signup() {
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-md px-3 py-2">
-                {error}
-              </p>
+              <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
             )}
 
             <Button
