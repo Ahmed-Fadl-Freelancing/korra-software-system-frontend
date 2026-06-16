@@ -32,7 +32,6 @@ export default function Login() {
       return;
     }
 
-    // DepartmentRedirect at /app handles routing to /app/sales or /app/tech
     navigate("/app");
   };
 
