@@ -9,11 +9,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SignedUploadUrl } from "@/types";
 import { toast } from "sonner";
+import { useCreateLinearIssue } from "@/hooks/useLinear";
 
 export default function CreateOpportunity() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const createLinearIssue = useCreateLinearIssue();
   const [form, setForm] = useState({
     project_name: "",
     email_body: "",
@@ -58,6 +60,26 @@ export default function CreateOpportunity() {
           console.warn(`Upload stub for ${file.name} — Django endpoints unavailable`);
         }
       }
+
+      // Auto-create Linear issue for the new opportunity
+      createLinearIssue.mutate(
+        {
+          title: `[Opportunity] ${form.project_name}`,
+          description: [
+            form.email_body ? `**Email body:**\n${form.email_body}` : "",
+            form.contractor ? `**Contractor:** ${form.contractor}` : "",
+            form.owner ? `**Owner:** ${form.owner}` : "",
+            form.consultant ? `**Consultant:** ${form.consultant}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+          priority: 3,
+        },
+        {
+          onSuccess: (issue) => toast.info(`Linear issue created: ${issue.identifier}`),
+          onError: () => console.warn("Linear issue creation skipped — backend unavailable"),
+        }
+      );
 
       toast.success("Opportunity created successfully");
       navigate(`/app/opportunities/${oppId}`);

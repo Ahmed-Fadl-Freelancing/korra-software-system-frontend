@@ -1,0 +1,44 @@
+[
+  {
+    "schema_name": "auth",
+    "table_name": "users",
+    "trigger_name": "on_auth_user_created",
+    "function_name": "handle_new_auth_user",
+    "function_source_code": "\r\nDECLARE\r\n  jt_value text;\r\nBEGIN\r\n  jt_value := NEW.raw_user_meta_data->>'job_title';\r\n\r\n  INSERT INTO public.user_profiles (user_id, employee_code, full_name, job_title, is_active)\r\n  VALUES (\r\n    NEW.id,\r\n    'EMP-' || UPPER(SUBSTRING(NEW.id::text, 1, 6)),\r\n    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),\r\n    CASE WHEN jt_value IS NOT NULL THEN jt_value::public.job_title_level ELSE NULL END,\r\n    true\r\n  );\r\n  RETURN NEW;\r\nEND;\r\n"
+  },
+  {
+    "schema_name": "public",
+    "table_name": "documents",
+    "trigger_name": "trg_documents_before_insert",
+    "function_name": "documents_set_version_and_current",
+    "function_source_code": "\ndeclare\n  next_ver int;\n  prev_current_id uuid;\nbegin\n  -- Determine next version for this (project_id, doc_type)\n  select coalesce(max(d.version), 0) + 1\n    into next_ver\n  from public.documents d\n  where d.project_id = new.project_id\n    and d.doc_type = new.doc_type;\n\n  new.version := next_ver;\n  new.is_current := true;\n\n  -- Mark previous current as not current (if any)\n  update public.documents\n     set is_current = false,\n         updated_at = now()\n   where project_id = new.project_id\n     and doc_type = new.doc_type\n     and is_current = true;\n\n  -- Update project's current document pointer\n  if new.doc_type = 'offer' then\n    update public.projects\n       set current_offer_id = new.id,\n           updated_at = now()\n     where id = new.project_id;\n  else\n    update public.projects\n       set current_submittal_id = new.id,\n           updated_at = now()\n     where id = new.project_id;\n  end if;\n\n  return new;\nend "
+  },
+  {
+    "schema_name": "public",
+    "table_name": "documents",
+    "trigger_name": "trg_documents_updated_at",
+    "function_name": "set_updated_at",
+    "function_source_code": "\nbegin\n  new.updated_at = now();\n  return new;\nend "
+  },
+  {
+    "schema_name": "public",
+    "table_name": "products",
+    "trigger_name": "trg_products_updated_at",
+    "function_name": "set_updated_at",
+    "function_source_code": "\nbegin\n  new.updated_at = now();\n  return new;\nend "
+  },
+  {
+    "schema_name": "public",
+    "table_name": "projects",
+    "trigger_name": "trg_projects_status_history",
+    "function_name": "log_project_status_change",
+    "function_source_code": "declare\n  v_user_id uuid;\nbegin\n  -- Only run when status changes\n  if new.status is distinct from old.status then\n\n    -- Read app user from the DB session (set by backend in same transaction)\n    v_user_id := nullif(current_setting('app.user_id', true), '')::uuid;\n\n    if v_user_id is null then\n      raise exception\n        using message = 'Missing app.user_id in DB session. Backend must do: SET LOCAL app.user_id = ''<uuid>'' inside the same transaction.',\n              errcode = '22023';\n    end if;\n\n    -- Require reason when status becomes lost or cancelled\n    if new.status in ('lost') then\n      if new.status_reason is null or btrim(new.status_reason) = '' then\n        raise exception\n          using message = 'status_reason is required when status becomes lost or cancelled',\n                errcode = '23514';\n      end if;\n    end if;\n\n    -- If status becomes won: our_price is required\n    if new.status = 'won' then\n      if new.status_our_price is null then\n        raise exception\n          using message = 'status_our_price is required when status becomes won',\n                errcode = '23514';\n      end if;\n    end if;\n\n    -- If status becomes lost: require competitor + both prices\n    if new.status = 'lost' then\n      if new.status_our_price is null then\n        raise exception\n          using message = 'status_our_price is required when status becomes lost',\n                errcode = '23514';\n      end if;\n\n      if new.status_competitor_price is null then\n        raise exception\n          using message = 'status_competitor_price is required when status becomes lost',\n                errcode = '23514';\n      end if;\n\n      if new.status_competitor_name is null or btrim(new.status_competitor_name) = '' then\n        raise exception\n          using message = 'status_competitor_name is required when status becomes lost',\n                errcode = '23514';\n      end if;\n    end if;\n\n    -- Insert history row\n    insert into public.project_status_history (\n      project_id,\n      from_status,\n      to_status,\n      changed_by_user_id,\n      changed_at,\n      reason,\n      notes,\n      meta,\n      our_price,\n      competitor_name,\n      competitor_price\n    ) values (\n      new.id,\n      old.status,\n      new.status,\n      v_user_id,\n      now(),\n      new.status_reason,\n      new.status_notes,\n      new.status_meta,\n      new.status_our_price,\n      new.status_competitor_name,\n      new.status_competitor_price\n    );\n\n    -- Clear transient fields so they aren't accidentally reused\n    new.status_reason := null;\n    new.status_notes := null;\n    new.status_meta := '{}'::jsonb;\n    new.status_our_price := null;\n    new.status_competitor_name := null;\n    new.status_competitor_price := null;\n\n  end if;\n\n  return new;\nend"
+  },
+  {
+    "schema_name": "public",
+    "table_name": "projects",
+    "trigger_name": "trg_projects_updated_at",
+    "function_name": "set_updated_at",
+    "function_source_code": "\nbegin\n  new.updated_at = now();\n  return new;\nend "
+  }
+]
