@@ -8,6 +8,7 @@ import { KpiCard } from "@/components/ui/kpi-card";
 import { KpiSkeleton, CardListSkeleton } from "@/components/ui/page-skeleton";
 import { TaskCard } from "@/components/TaskCard";
 import { ManagerWidgets } from "@/components/dashboard/ManagerWidgets";
+import { LinearIssuesWidget } from "@/components/dashboard/LinearIssuesWidget";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,6 +66,9 @@ export default function SalesDashboard() {
 
       {/* Manager Widgets */}
       {isManager && <ManagerWidgets />}
+
+      {/* Linear Issues */}
+      <LinearIssuesWidget />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Urgent Tasks */}

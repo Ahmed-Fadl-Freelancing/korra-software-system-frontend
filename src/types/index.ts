@@ -1,5 +1,17 @@
-export type RoleCode = "sales" | "engineer" | "manager" | "admin";
-export type DepartmentName = "sales" | "tech_office";
+// ─── Auth & Identity ──────────────────────────────────────────────────────────
+
+export type RoleCode = "sales_engineer" | "tech_engineer" | "manager" | "admin";
+export type DepartmentName = "Sales" | "Tech Office";
+
+export type JobTitleLevel =
+  | "Junior Engineer"
+  | "Senior Engineer"
+  | "Lead Engineer"
+  | "Section Head"
+  | "Department Manager"
+  | "General Manager"
+  | "Director"
+  | "Board Member";
 
 export interface Department {
   id: string;
@@ -7,12 +19,84 @@ export interface Department {
 }
 
 export interface UserProfile {
-  id: string;
+  user_id: string;
   email: string;
-  name: string;
-  department: Department;
+  employee_code: string;
+  full_name: string;
+  job_title: string | null;
+  is_active: boolean;
+  department: Department | null;
   roles: RoleCode[];
 }
+
+// ─── Projects (shown as "Opportunities" in UI) ────────────────────────────────
+
+export type ProjectStatus =
+  | "tenderingPhase"
+  | "technicalApproval"
+  | "finalNegotiation"
+  | "won"
+  | "lost"
+  | "onHold"
+  | "withDifferentContractor"
+  | "cancelled";
+
+export type ProductFamily = "Chiller" | "Pump" | "Generator";
+export type ProjectScope = "Supply" | "SupplyInstallation" | "Maintenance" | "Retrofit" | "Other";
+export type ProjectApplication = "Industrial" | "Commercial" | "Health" | "Residential";
+export type DocumentType = "offer" | "submittal" | "rfq";
+
+export type WinReason = "price" | "technical" | "relationship" | "service" | "sole_source" | "bundled_deal";
+export type LossReason = "price" | "technical" | "relationship" | "delivery_delay" | "response_delay" | "scope_changed" | "bad_experience";
+
+export interface ProjectParty {
+  id: string;
+  name: string;
+}
+
+export interface ProjectUser {
+  user_id: string;
+  full_name: string;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  contractor: ProjectParty | null;
+  consultant: ProjectParty | null;
+  owner: ProjectParty | null;
+  sales_engineer: ProjectUser;
+  tech_engineer: ProjectUser | null;
+  application: ProjectApplication;
+  scope: ProjectScope;
+  status: ProjectStatus;
+  product: { id: string; family: ProductFamily; model_code: string } | null;
+  extracted_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+// Keep "Opportunity" as an alias — UI uses this label
+export type Opportunity = Project;
+
+// ─── Documents ────────────────────────────────────────────────────────────────
+
+export interface DocumentMeta {
+  id: string;
+  filename: string;
+  doc_type: DocumentType;
+  version: number;
+  is_current: boolean;
+  url?: string;
+  created_at: string;
+}
+
+export interface SignedUploadUrl {
+  signed_url: string;
+  document_id: string;
+}
+
+// ─── Tasks ────────────────────────────────────────────────────────────────────
 
 export interface Task {
   id: string;
@@ -24,34 +108,49 @@ export interface Task {
   assigned_to: string;
 }
 
-export interface Opportunity {
-  id: string;
-  project_name: string;
-  email_body: string;
-  contractor: string;
-  owner: string;
-  consultant: string;
-  status: string;
-  created_at: string;
-  documents: DocumentMeta[];
-}
-
-export interface DocumentMeta {
-  id: string;
-  filename: string;
-  url?: string;
-  uploaded_at: string;
-}
-
-export interface SignedUploadUrl {
-  signed_url: string;
-  document_id: string;
-}
+// ─── Timeline ─────────────────────────────────────────────────────────────────
 
 export interface TimelineEvent {
   id: string;
-  status: string;
-  timestamp: string;
+  from_status: ProjectStatus | null;
+  to_status: ProjectStatus;
+  changed_at: string;
   user_name?: string;
-  note?: string;
+  notes?: string;
+}
+
+// ─── Linear ───────────────────────────────────────────────────────────────────
+
+export interface LinearIssueState {
+  id: string;
+  name: string;
+  type: string;
+}
+
+export interface LinearIssueAssignee {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface LinearIssueLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+export type LinearPriority = 0 | 1 | 2 | 3 | 4;
+
+export interface LinearIssue {
+  id: string;
+  identifier: string;
+  title: string;
+  description?: string;
+  priority: LinearPriority;
+  url: string;
+  createdAt: string;
+  updatedAt: string;
+  state: LinearIssueState;
+  assignee?: LinearIssueAssignee;
+  labels: { nodes: LinearIssueLabel[] };
 }

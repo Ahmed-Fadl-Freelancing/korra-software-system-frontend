@@ -1,28 +1,33 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useState } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Layers, Lock, Mail } from "lucide-react";
+import { Layers, Lock, Mail, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Show banner when arriving from successful signup
+  const [signupSuccess] = useState(() => !!(location.state as any)?.signedUp);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const authError = await signIn(email, password);
 
-    if (error) {
-      setError(error.message);
+    if (authError) {
+      setError(authError.message);
       setLoading(false);
       return;
     }
@@ -31,23 +36,31 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm border-0 shadow-lg">
-        <CardHeader className="text-center space-y-3 pb-2">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <Layers className="h-6 w-6 text-primary" />
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+      <Card className="w-full max-w-sm border-slate-200 bg-white shadow-sm">
+        <CardHeader className="text-center space-y-2 pb-2">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50">
+            <Layers className="h-6 w-6 text-blue-800" />
           </div>
-          <div>
-            <CardTitle className="text-xl font-bold">Welcome back</CardTitle>
-            <CardDescription className="text-xs">Sales & Tech Office Platform</CardDescription>
-          </div>
+          <CardTitle className="text-xl font-bold text-slate-900">Welcome back</CardTitle>
+          <CardDescription className="text-xs text-slate-500">
+            Sales &amp; Tech Office Platform
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+
+        <CardContent className="space-y-4">
+          {signupSuccess && (
+            <div className="flex items-start gap-2 rounded-md bg-green-50 border border-green-100 px-3 py-2 text-sm text-green-700">
+              <CheckCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              Account created — check your email to confirm, then sign in.
+            </div>
+          )}
+
           <form onSubmit={handleLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs font-medium">Email</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-medium text-slate-700">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="email"
                   type="email"
@@ -59,10 +72,11 @@ export default function Login() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs font-medium">Password</Label>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-xs font-medium text-slate-700">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
                   id="password"
                   type="password"
@@ -73,15 +87,25 @@ export default function Login() {
                 />
               </div>
             </div>
+
             {error && (
-              <p className="text-sm text-destructive">{error}</p>
+              <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
             )}
-            <Button type="submit" className="w-full" disabled={loading}>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-800 hover:bg-blue-900 text-white"
+            >
               {loading ? "Signing in…" : "Sign In"}
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:underline">
+
+            <p className="text-center text-xs text-slate-500">
+              Don&apos;t have an account?{" "}
+              <Link to="/signup" className="text-blue-800 hover:underline font-medium">
                 Sign up
               </Link>
             </p>

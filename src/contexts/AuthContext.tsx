@@ -1,107 +1,131 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
 import { apiClient } from "@/lib/api-client";
-import { UserProfile, DepartmentName } from "@/types";
+import { UserProfile, DepartmentName, JobTitleLevel } from "@/types";
+
+interface AuthError {
+  message: string;
+}
 
 interface AuthState {
-  session: Session | null;
-  user: UserProfile | null;
+  isAuthenticated: boolean;
   loading: boolean;
+  // user/role fields kept for interface compatibility — populated by the
+  // department branch (GET /me). Until then they return null/false stubs.
+  user: UserProfile | null;
   isStubMode: boolean;
-  signOut: () => Promise<void>;
   hasDepartment: (dept: DepartmentName) => boolean;
   hasRole: (role: string) => boolean;
   isManager: boolean;
   departmentName: DepartmentName | null;
+  signIn: (email: string, password: string) => Promise<AuthError | null>;
+  signUp: (email: string, password: string, fullName: string, jobTitle: JobTitleLevel, department: DepartmentName) => Promise<{ error: AuthError | null; needsConfirmation: boolean }>;
+  signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState>({
-  session: null,
-  user: null,
+  isAuthenticated: false,
   loading: true,
+  user: null,
   isStubMode: false,
-  signOut: async () => {},
   hasDepartment: () => false,
   hasRole: () => false,
   isManager: false,
   departmentName: null,
+  signIn: async () => null,
+  signUp: async () => ({ error: null, needsConfirmation: true }),
+  signOut: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
 
-const STUB_USER: UserProfile = {
-  id: "stub-user-id",
-  email: "demo@example.com",
-  name: "Demo User",
-  department: { id: "dept-1", name: "sales" },
-  roles: ["sales", "manager"],
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isStubMode, setIsStubMode] = useState(false);
 
-  const fetchUserProfile = async () => {
+  // On mount: if a valid token exists in localStorage, mark as authenticated.
+  // No /me call — profile hydration is handled by the department branch.
+  useEffect(() => {
+    const token = apiClient.getAccessToken();
+    if (token) setIsAuthenticated(true);
+    setLoading(false);
+  }, []);
+
+  const signIn = async (email: string, password: string): Promise<AuthError | null> => {
     try {
-      const profile = await apiClient.get<UserProfile>("/me");
-      setUser(profile);
-      setIsStubMode(false);
-    } catch {
-      console.warn("Django /me unavailable, using stub user profile");
-      setUser(STUB_USER);
-      setIsStubMode(true);
+      const data = await apiClient.post<{ access_token: string; refresh_token: string }>(
+        "/auth/login",
+        { email, password }
+      );
+      if (!data.access_token) {
+        return { message: "Login succeeded but no token was returned. Please try again." };
+      }
+      apiClient.setTokens(data.access_token, data.refresh_token);
+      setIsAuthenticated(true);
+      return null;
+    } catch (err: any) {
+      return { message: err.message || "Login failed" };
     }
   };
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        if (session) {
-          await fetchUserProfile();
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
-      }
-    );
+  const signUp = async (
+    email: string,
+    password: string,
+    fullName: string,
+    jobTitle: JobTitleLevel,
+    department: DepartmentName
+  ) => {
+    try {
+      // Django returns: { user: <goTrueResponse>, session: null, message: "..." }
+      // When email confirmation is OFF, GoTrue session lives inside data.user.
+      const data = await apiClient.post<{
+        user: { access_token?: string; refresh_token?: string } | null;
+        session: null;
+        message: string;
+      }>(
+        "/auth/signup",
+        { email, password, full_name: fullName, job_title: jobTitle, department }
+      );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        await fetchUserProfile();
+      // EMAIL VERIFICATION BYPASSED (Supabase free tier — 2 emails/hour).
+      // When "Enable email confirmations" is OFF, GoTrue returns tokens in data.user.
+      // TO RE-ENABLE: turn ON "Enable email confirmations" in Supabase Auth settings,
+      // then remove the if-block below — the needsConfirmation=true path takes over.
+      if (data.user?.access_token) {
+        apiClient.setTokens(data.user.access_token, data.user.refresh_token);
+        setIsAuthenticated(true);
+        return { error: null, needsConfirmation: false };
       }
-      setLoading(false);
-    });
 
-    return () => subscription.unsubscribe();
-  }, []);
+      return { error: null, needsConfirmation: true };
+    } catch (err: any) {
+      return { error: { message: err.message || "Signup failed" }, needsConfirmation: false };
+    }
+  };
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
-      // Explicitly clear any items that might be cached or stuck
-      localStorage.removeItem("sb-" + import.meta.env.VITE_SUPABASE_URL.split("//")[1].split(".")[0] + "-auth-token");
-      localStorage.clear(); // Nuclear option for logout safety
-    } catch (error) {
-      console.error("SignOut error:", error);
+      await apiClient.post("/auth/logout").catch(() => {});
     } finally {
-      setSession(null);
-      setUser(null);
+      apiClient.clearTokens();
+      setIsAuthenticated(false);
       window.location.href = "/login";
     }
   };
 
-  const hasDepartment = (dept: DepartmentName) => user?.department.name === dept;
-  const hasRole = (role: string) => user?.roles.includes(role as any) ?? false;
-  const isManager = user?.roles.includes("manager") ?? false;
-  const departmentName = user?.department.name ?? null;
-
   return (
-    <AuthContext.Provider value={{ session, user, loading, isStubMode, signOut, hasDepartment, hasRole, isManager, departmentName }}>
+    <AuthContext.Provider value={{
+      isAuthenticated,
+      loading,
+      user: null,
+      isStubMode: false,
+      hasDepartment: () => false,
+      hasRole: () => false,
+      isManager: false,
+      departmentName: null,
+      signIn,
+      signUp,
+      signOut,
+    }}>
       {children}
     </AuthContext.Provider>
   );

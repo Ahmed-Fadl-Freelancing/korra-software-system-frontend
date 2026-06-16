@@ -6,8 +6,9 @@ export function DepartmentRedirect() {
 
   if (loading) return null;
 
-  if (departmentName === "tech_office") {
-    return <Navigate to="/app/tech" replace />;
-  }
-  return <Navigate to="/app/sales" replace />;
+  if (departmentName === "Tech Office") return <Navigate to="/app/tech" replace />;
+  if (departmentName === "Sales") return <Navigate to="/app/sales" replace />;
+
+  // No department assigned yet — admin hasn't activated the account
+  return <Navigate to="/pending" replace />;
 }

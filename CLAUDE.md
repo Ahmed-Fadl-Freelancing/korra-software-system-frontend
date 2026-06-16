@@ -1,4 +1,4 @@
-# GitHub Copilot Instructions — Korra Frontend (Copilot reads this)
+# CLAUDE.md — Korra Frontend (Claude reads this)
 
 > **Body is kept IDENTICAL to `.github/copilot-instructions.md`.**
 > When you change AI rules, update **both** files so Claude and Copilot share the same rulebook.

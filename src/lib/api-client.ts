@@ -1,43 +1,105 @@
-import { supabase } from "./supabase";
+const API_BASE = import.meta.env.VITE_DJANGO_API_BASE_URL || "http://localhost:8000";
 
-const DJANGO_API_BASE = import.meta.env.VITE_DJANGO_API_BASE_URL || "http://localhost:8000";
+export const TOKEN_KEYS = {
+  ACCESS: "korra_access_token",
+  REFRESH: "korra_refresh_token",
+} as const;
+
+export class ApiAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ApiAuthError";
+  }
+}
 
 class ApiClient {
-  private async getToken(): Promise<string | null> {
-    const { data } = await supabase.auth.getSession();
-    return data.session?.access_token ?? null;
+  getAccessToken(): string | null {
+    const val = localStorage.getItem(TOKEN_KEYS.ACCESS);
+    // Guard against "null" / "undefined" strings stored by accident
+    if (!val || val === "null" || val === "undefined") return null;
+    return val;
+  }
+
+  setTokens(access: string | null | undefined, refresh?: string | null) {
+    // Only store real non-empty strings — never store null / undefined / "null"
+    if (access && access !== "null" && access !== "undefined") {
+      localStorage.setItem(TOKEN_KEYS.ACCESS, access);
+    }
+    if (refresh && refresh !== "null" && refresh !== "undefined") {
+      localStorage.setItem(TOKEN_KEYS.REFRESH, refresh);
+    }
+  }
+
+  clearTokens() {
+    localStorage.removeItem(TOKEN_KEYS.ACCESS);
+    localStorage.removeItem(TOKEN_KEYS.REFRESH);
+  }
+
+  private async tryRefresh(): Promise<boolean> {
+    const refresh = localStorage.getItem(TOKEN_KEYS.REFRESH);
+    if (!refresh || refresh === "null" || refresh === "undefined") return false;
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      this.setTokens(data.access_token, data.refresh_token);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async request<T = unknown>(
     path: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    _retry = true
   ): Promise<T> {
-    const token = await this.getToken();
-    if (!token) {
-      window.location.href = "/login";
-      throw new Error("Not authenticated");
+    const isAuthPath = path.startsWith("/auth/");
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string> || {}),
+    };
+
+    if (!isAuthPath) {
+      const token = this.getAccessToken();
+      if (!token) {
+        // Throw — ProtectedRoute handles the redirect to /login, not us
+        throw new ApiAuthError("No access token");
+      }
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${DJANGO_API_BASE}${path}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {}),
-      },
-    });
+    const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+    // Auto-refresh on 401 (once, non-auth paths only)
+    if (res.status === 401 && !isAuthPath && _retry) {
+      const refreshed = await this.tryRefresh();
+      if (refreshed) return this.request<T>(path, options, false);
+      this.clearTokens();
+      throw new ApiAuthError("Session expired");
+    }
 
     if (res.status === 401) {
-      await supabase.auth.signOut();
-      window.location.href = "/login";
-      throw new Error("Unauthorized");
+      this.clearTokens();
+      throw new ApiAuthError("Unauthorized");
     }
 
     if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`API error ${res.status}: ${body}`);
+      let message = `Something went wrong (${res.status})`;
+      try {
+        const body = await res.json();
+        message = body.detail ?? body.message ?? body.error ?? message;
+      } catch {
+        // body wasn't JSON — keep generic message
+      }
+      throw new Error(message);
     }
 
+    if (res.status === 204) return undefined as T;
     return res.json();
   }
 
@@ -70,7 +132,6 @@ class ApiClient {
     return this.request<T>(path, { method: "DELETE" });
   }
 
-  /** Upload file to a signed URL (PUT with raw body) */
   async uploadToSignedUrl(signedUrl: string, file: File): Promise<void> {
     const res = await fetch(signedUrl, {
       method: "PUT",
