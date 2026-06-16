@@ -9,7 +9,7 @@
 >
 > Linear: Team **Korrra** (key `KOR`). One PR **per feature (milestone group)**, never per issue.
 > Branch convention (new work): **`feat/<Name>`** (e.g. `feat/Auth`).
-> Last updated: 2026-06-04 — KOR-113–116 created in Linear, status: In Review (PR #2 open)
+> Last updated: 2026-06-16 — KOR-53 merged to main (PR #3). KOR-117–121 created for User Profile & Department Routing, status: In Progress. Branch: feat/UserProfile
 >
 > **Brand:** Card palette = Blue · White · Silver. All UI must follow this. See `ISSUES.md` → Brand Identity for exact tokens.
 
@@ -19,12 +19,7 @@
 
 | Repo | Issue | Title | Branch | Status |
 |------|-------|-------|--------|--------|
-| **[BE]** | **KOR-113–116** | Auth session endpoints — signup / login / logout / refresh (Supabase proxy) | `feat/Auth` | 🔧 In Review (PR #2) |
-| [FE] | KOR-5x | Wire login/signup forms to backend `/auth/*` (replace direct Supabase calls if desired) | `feat/Auth` | 🔲 Todo — confirm ID in FE repo |
-
-> ℹ️ Frontend issue IDs below come from the handover docs (`BACKEND_HANDOVER.md`)
-> and may differ from Linear. **Confirm the real KOR id in the frontend repo's
-> own PROGRESS.md / Linear before starting an [FE] task.**
+| **[FE]** | **KOR-117–121** | User Profile & Department Routing — GET /me, AuthContext profile, DepartmentRedirect, ProtectedRoute guards, Topbar | `feat/UserProfile` | 🔧 In Progress |
 
 ---
 
@@ -41,8 +36,13 @@
 | [BE] | KOR-114 | `POST /auth/login` — password grant, relays Supabase tokens | 🔧 In Review (PR #2) |
 | [BE] | KOR-115 | `POST /auth/logout` — revoke Supabase session | 🔧 In Review (PR #2) |
 | [BE] | KOR-116 | `POST /auth/refresh` — refresh-token grant | 🔧 In Review (PR #2) |
-| [FE] | KOR-53 | Auth foundation — Backend Proxy (`/auth/*`), `AuthContext`, `/me` hydration | 🔧 In Review |
-| [FE] | KOR-54 | App layout support | 🔲 Todo (per handover) |
+| [FE] | KOR-53 | Auth foundation — Backend Proxy (`/auth/*`), `AuthContext`, signIn/signUp/signOut | ✅ Done (merged) |
+| [FE] | KOR-54 | App Layout — AppLayout, AppSidebar, Topbar skeleton | ✅ Done |
+| [FE] | KOR-117 | GET /me — restore user profile fetch after login | 🔧 In Progress |
+| [FE] | KOR-118 | AuthContext — expose user profile, hasDepartment, hasRole, departmentName | 🔧 In Progress |
+| [FE] | KOR-119 | Department-based routing — /app → /app/sales or /app/tech | 🔧 In Progress |
+| [FE] | KOR-120 | ProtectedRoute — department null guard + role/section guards | 🔧 In Progress |
+| [FE] | KOR-121 | Topbar — display user full_name, department badge, manager badge | 🔧 In Progress |
 
 > **Architecture note:** Django never mints its own JWT. The `/auth/*` endpoints
 > forward credentials to **Supabase Auth (GoTrue)**; Supabase issues the

@@ -36,8 +36,22 @@
 
 ---
 
+## KOR-117–121: User Profile & Department Routing
+> Branch: `feat/UserProfile`
+> Deferred from KOR-53 — GET /me call, real user state, department-based navigation.
+
+| # | Tag | Task | Status |
+|---|-----|------|--------|
+| 117 | [FE] | `GET /me` — call after login/signup; populate AuthContext with real profile | `[ ]` |
+| 118 | [FE] | AuthContext — replace null stubs with real `user`, `hasDepartment`, `hasRole`, `isManager`, `departmentName` | `[ ]` |
+| 119 | [FE] | `DepartmentRedirect` — wire back into `/app` index route; Sales → `/app/sales`, Tech Office → `/app/tech`, null → `/pending` | `[ ]` |
+| 120 | [FE] | `ProtectedRoute` — restore department null guard + role/section guards (removed in KOR-53) | `[ ]` |
+| 121 | [FE] | Topbar — display `full_name`, department badge, `isManager` badge from AuthContext | `[ ]` |
+
+---
+
 ## KOR-53: Auth Foundation
-> Branch: `feat/Auth-KOR-53`
+> Branch: `feat/Auth-KOR-53` — ✅ Merged to main
 
 | # | Tag | Task | Status |
 |---|-----|------|--------|
