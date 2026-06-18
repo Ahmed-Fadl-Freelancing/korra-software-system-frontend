@@ -4,9 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { DepartmentRedirect } from "@/components/DepartmentRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import PendingActivation from "@/pages/PendingActivation";
 import Inbox from "@/pages/Inbox";
 import CreateOpportunity from "@/pages/CreateOpportunity";
 import OpportunityDetail from "@/pages/OpportunityDetail";
@@ -28,6 +30,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/pending" element={<PendingActivation />} />
             <Route path="/" element={<Navigate to="/app" replace />} />
 
             <Route
@@ -38,7 +41,7 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/app/sales" replace />} />
+              <Route index element={<DepartmentRedirect />} />
               <Route path="inbox" element={<Inbox />} />
               <Route path="opportunities" element={<OpportunitiesList />} />
               <Route path="opportunities/new" element={<CreateOpportunity />} />
