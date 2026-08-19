@@ -1,73 +1,66 @@
-# Welcome to your Lovable project
+# Korra Software System — Frontend
 
-## Project info
+React/TypeScript client for **Korra**, an internal sales/tech-office opportunity-tracking
+system. It gives Sales Engineers, Tech Office Engineers, and Managers role-scoped
+dashboards for tracking opportunities from tendering through to won/lost, along with
+document handling and a task inbox.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Companion repo: [`Korra-Software-System-Backend`](https://github.com/Ahmed-Fadl-Freelancing/Korra-Software-System-Backend) (Django REST API).
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+Vite · TypeScript · React 18 · React Router · shadcn/ui (Radix) · Tailwind CSS · Vitest + Playwright
 
-**Use Lovable**
+## Architecture
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+- **Auth is JWT-based against the backend, not Supabase directly** — the frontend
+  never imports `@supabase/supabase-js` or talks to Supabase itself; all data flows
+  through the Django API (`src/lib/api-client.ts`).
+- Route access is gated by `ProtectedRoute` / `RoleGuard`, matching the department
+  and role model defined in the backend (`Sales`, `Tech Office`, `manager`, `admin`).
+- `AuthContext` hydrates the current user/session; `useLinear` integrates with Linear
+  for issue-linked views.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Key Routes
 
-**Use your preferred IDE**
+| Path | Page |
+|---|---|
+| `/login`, `/signup` | Auth |
+| `/app/sales` | Sales dashboard |
+| `/app/tech` | Tech office dashboard |
+| `/app/inbox` | Task inbox |
+| `/app/opportunities`, `/opportunities/:id`, `/opportunities/new` | Opportunity list / detail / create |
+| `/app/engineering` | Engineering area (protected) |
+| `/app/offers`, `/outcomes`, `/shortlists`, `/pricing` | Placeholder pages for upcoming features |
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Design System
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Brand palette is blue/white/silver — see `ISSUES.md` for the full token table
+(primary blue `#1E3A8A`, surfaces white/`slate-50`, borders `slate-300`). Cards use
+white backgrounds with silver borders; warm colors are reserved for destructive/status
+states.
 
-Follow these steps:
+## Getting Started
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+```bash
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+cp .env.example .env   # point VITE_API_URL at the backend
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+```bash
+npm run build      # production build
+npm run lint        # eslint
+npm run test         # vitest
+```
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Project Docs
 
-**Use GitHub Codespaces**
+- `PROJECT_FLOW.md` — canonical schema/enum/business-logic reference shared with the backend
+- `PROGRESS.md` — cross-repo milestone tracker (kept in sync with the backend repo)
+- `ISSUES.md` — unified issue tracker and design-system tokens
+- Work is tracked in Linear (team **Korra**, key `KOR`); one PR per feature, reviewed by a human before merge.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Status
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Actively in development. See `PROGRESS.md` for the current milestone and what's next.
