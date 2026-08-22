@@ -5,71 +5,124 @@ import { FileUpload } from "@/components/FileUpload";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { SignedUploadUrl } from "@/types";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Project, ProjectApplication, ProjectScope, ProductFamily, DocumentType, SignedUploadUrl,
+} from "@/types";
 import { toast } from "sonner";
 import { useCreateLinearIssue } from "@/hooks/useLinear";
+
+// Real PDF extraction is not wired up yet (backend fetch/parse is still stubbed) — this
+// form collects the same fields a review-and-confirm step would, so the create -> Supabase
+// write -> document-in-bucket flow can be exercised end-to-end without it. Swap this for the
+// real Path A extraction UI once the backend pipeline is implemented.
+
+const APPLICATIONS: ProjectApplication[] = ["Industrial", "Commercial", "Health", "Residential"];
+const SCOPES: { value: ProjectScope; label: string }[] = [
+  { value: "Supply", label: "Supply" },
+  { value: "SupplyInstallation", label: "Supply & Installation" },
+  { value: "Maintenance", label: "Maintenance" },
+  { value: "Retrofit", label: "Retrofit" },
+  { value: "Other", label: "Other" },
+];
+const PRODUCT_FAMILIES: ProductFamily[] = ["Chiller", "Pump", "Generator"];
+const DOC_TYPES: { value: DocumentType; label: string }[] = [
+  { value: "rfq", label: "RFQ" },
+  { value: "offer", label: "Offer" },
+  { value: "submittal", label: "Submittal" },
+];
+
+interface FormState {
+  name: string;
+  application: ProjectApplication | "";
+  scope: ProjectScope | "";
+  contractor_name: string;
+  owner_name: string;
+  consultant_name: string;
+  product_family: ProductFamily | "";
+  product_model_code: string;
+}
+
+const initialForm: FormState = {
+  name: "",
+  application: "",
+  scope: "",
+  contractor_name: "",
+  owner_name: "",
+  consultant_name: "",
+  product_family: "",
+  product_model_code: "",
+};
 
 export default function CreateOpportunity() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [docType, setDocType] = useState<DocumentType>("rfq");
   const createLinearIssue = useCreateLinearIssue();
-  const [form, setForm] = useState({
-    project_name: "",
-    email_body: "",
-    contractor: "",
-    owner: "",
-    consultant: "",
-  });
+  const [form, setForm] = useState<FormState>(initialForm);
 
-  const update = (field: string, value: string) =>
+  const update = <K extends keyof FormState>(field: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.name || !form.application || !form.scope) {
+      toast.error("Name, application, and scope are required.");
+      return;
+    }
+    if (Boolean(form.product_family) !== Boolean(form.product_model_code)) {
+      toast.error("Product family and model code must be provided together.");
+      return;
+    }
+
     setLoading(true);
-
     try {
-      // Step 1: Create opportunity
-      let oppId: string;
-      try {
-        const opp = await apiClient.post<{ id: string }>("/opportunities", form);
-        oppId = opp.id;
-      } catch {
-        // Stub: simulate created opportunity
-        oppId = `opp-${Date.now()}`;
-        console.warn("Django POST /opportunities unavailable, using stub ID");
-      }
+      // Step 1: create the opportunity (Path B — manual entry, no PDF extraction yet)
+      const project = await apiClient.post<Project>("/opportunities/manual", {
+        name: form.name,
+        application: form.application,
+        scope: form.scope,
+        contractor_name: form.contractor_name || undefined,
+        owner_name: form.owner_name || undefined,
+        consultant_name: form.consultant_name || undefined,
+        product_family: form.product_family || undefined,
+        product_model_code: form.product_model_code || undefined,
+      });
 
-      // Step 2: Upload files via signed URLs
+      // Step 2: upload each file to Supabase Storage via a signed URL, then register its
+      // metadata (this is what actually moves the file into the bucket at a real path and
+      // creates a Document row pointing at it).
       for (const file of files) {
-        try {
-          const { signed_url } = await apiClient.post<SignedUploadUrl>(
-            "/documents/signed-upload-url",
-            { opportunity_id: oppId, filename: file.name, content_type: file.type }
-          );
-          await apiClient.uploadToSignedUrl(signed_url, file);
-          // Step 3: Register document metadata
-          await apiClient.post("/documents", {
-            opportunity_id: oppId,
-            filename: file.name,
-          });
-        } catch {
-          console.warn(`Upload stub for ${file.name} — Django endpoints unavailable`);
-        }
+        const path = `${project.id}/${docType}/${Date.now()}-${file.name}`;
+        const { signed_url } = await apiClient.post<SignedUploadUrl>(
+          "/documents/signed-upload-url",
+          { bucket: "documents", path, content_type: file.type }
+        );
+        await apiClient.uploadToSignedUrl(signed_url, file);
+        await apiClient.post("/documents/", {
+          project_id: project.id,
+          doc_type: docType,
+          bucket: "documents",
+          path,
+          filename: file.name,
+          content_type: file.type,
+        });
       }
 
-      // Auto-create Linear issue for the new opportunity
+      // Auto-create a Linear issue for the new opportunity — non-blocking, doesn't affect
+      // the main create flow if it fails.
       createLinearIssue.mutate(
         {
-          title: `[Opportunity] ${form.project_name}`,
+          title: `[Opportunity] ${form.name}`,
           description: [
-            form.email_body ? `**Email body:**\n${form.email_body}` : "",
-            form.contractor ? `**Contractor:** ${form.contractor}` : "",
-            form.owner ? `**Owner:** ${form.owner}` : "",
-            form.consultant ? `**Consultant:** ${form.consultant}` : "",
+            `**Application:** ${form.application} · **Scope:** ${form.scope}`,
+            form.contractor_name ? `**Contractor:** ${form.contractor_name}` : "",
+            form.owner_name ? `**Owner:** ${form.owner_name}` : "",
+            form.consultant_name ? `**Consultant:** ${form.consultant_name}` : "",
           ]
             .filter(Boolean)
             .join("\n\n"),
@@ -77,15 +130,14 @@ export default function CreateOpportunity() {
         },
         {
           onSuccess: (issue) => toast.info(`Linear issue created: ${issue.identifier}`),
-          onError: () => console.warn("Linear issue creation skipped — backend unavailable"),
+          onError: () => console.warn("Linear issue creation failed — continuing anyway"),
         }
       );
 
       toast.success("Opportunity created successfully");
-      navigate(`/app/opportunities/${oppId}`);
+      navigate(`/app/opportunities/${project.id}`);
     } catch (err) {
-      toast.error("Failed to create opportunity");
-      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Failed to create opportunity");
     } finally {
       setLoading(false);
     }
@@ -103,46 +155,108 @@ export default function CreateOpportunity() {
             <div className="space-y-2">
               <Label>Project Name</Label>
               <Input
-                value={form.project_name}
-                onChange={(e) => update("project_name", e.target.value)}
+                value={form.name}
+                onChange={(e) => update("name", e.target.value)}
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label>Email Body</Label>
-              <Textarea
-                value={form.email_body}
-                onChange={(e) => update("email_body", e.target.value)}
-                rows={4}
-              />
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Application</Label>
+                <Select
+                  value={form.application}
+                  onValueChange={(v) => update("application", v as ProjectApplication)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select application" /></SelectTrigger>
+                  <SelectContent>
+                    {APPLICATIONS.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Scope</Label>
+                <Select
+                  value={form.scope}
+                  onValueChange={(v) => update("scope", v as ProjectScope)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select scope" /></SelectTrigger>
+                  <SelectContent>
+                    {SCOPES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label>Contractor</Label>
                 <Input
-                  value={form.contractor}
-                  onChange={(e) => update("contractor", e.target.value)}
+                  value={form.contractor_name}
+                  onChange={(e) => update("contractor_name", e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Owner</Label>
                 <Input
-                  value={form.owner}
-                  onChange={(e) => update("owner", e.target.value)}
+                  value={form.owner_name}
+                  onChange={(e) => update("owner_name", e.target.value)}
                 />
               </div>
               <div className="space-y-2">
                 <Label>Consultant</Label>
                 <Input
-                  value={form.consultant}
-                  onChange={(e) => update("consultant", e.target.value)}
+                  value={form.consultant_name}
+                  onChange={(e) => update("consultant_name", e.target.value)}
                 />
               </div>
             </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Product Family</Label>
+                <Select
+                  value={form.product_family}
+                  onValueChange={(v) => update("product_family", v as ProductFamily)}
+                >
+                  <SelectTrigger><SelectValue placeholder="Optional" /></SelectTrigger>
+                  <SelectContent>
+                    {PRODUCT_FAMILIES.map((f) => (
+                      <SelectItem key={f} value={f}>{f}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Model Code</Label>
+                <Input
+                  value={form.product_model_code}
+                  onChange={(e) => update("product_model_code", e.target.value)}
+                  disabled={!form.product_family}
+                  placeholder={form.product_family ? "e.g. CH-500X" : "Select a product family first"}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label>Documents (PDF)</Label>
+              <div className="flex items-center justify-between">
+                <Label>Documents</Label>
+                <Select value={docType} onValueChange={(v) => setDocType(v as DocumentType)}>
+                  <SelectTrigger className="h-8 w-32"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {DOC_TYPES.map((d) => (
+                      <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <FileUpload files={files} onChange={setFiles} />
             </div>
+
             <Button type="submit" disabled={loading} className="w-full">
               {loading ? "Creating…" : "Create Opportunity"}
             </Button>

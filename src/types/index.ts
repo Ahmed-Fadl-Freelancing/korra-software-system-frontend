@@ -95,9 +95,13 @@ export interface DocumentMeta {
   created_at: string;
 }
 
+// Matches Django's SignedUploadUrlView response — passes through Supabase Storage's
+// create_signed_upload_url() result verbatim: { signed_url, token, path }. No document_id
+// here — POST /documents/ (after the upload) is what creates the actual Document row/id.
 export interface SignedUploadUrl {
   signed_url: string;
-  document_id: string;
+  token: string;
+  path: string;
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────

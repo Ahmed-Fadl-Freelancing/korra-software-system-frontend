@@ -1,3 +1,23 @@
+> **Status: ✅ Done** (2026-08-22, on `claude/korra-project-setup-sumr8a`) — `CreateOpportunity.tsx`
+> rebuilt with real `Select` dropdowns (application/scope/product family) and inputs, wired to
+> `POST /opportunities/manual` (backend task 003), and now genuinely uploads files to Supabase
+> Storage + registers them via `POST /documents/` instead of the old silent-stub-on-failure
+> fallback. Contractor/owner/consultant are free-text inputs (get-or-created by name server-side),
+> not a lookup/autocomplete UI — a deliberate scope cut per the user's explicit request to swap
+> real PDF extraction for plain form fields "to test the flow and data integration," not a missed
+> requirement. Also fixed two pre-existing contract bugs found while wiring this up:
+> `SignedUploadUrl`'s type didn't match what the backend actually returns (`{signed_url, token,
+> path}`, not `{signed_url, document_id}`), and `apiClient.uploadToSignedUrl` sent a raw binary PUT
+> body where Supabase Storage's signed-upload endpoint expects multipart form-data under a `file`
+> field (confirmed against the installed `storage3` Python client's source, since neither could be
+> verified live — see below).
+>
+> Not live-verified end-to-end from within the sandbox that built this (outbound network to
+> `*.supabase.co` is blocked there) — typecheck and production build both pass with no new errors
+> beyond the pre-existing ones task 002 already owns. **You'll need to actually run this locally
+> against real Supabase to confirm the physical upload works** — the multipart-vs-binary fix above
+> is evidence-based (real client library source) but unverified against the live API from here.
+
 # 004 — Rebuild manual opportunity intake against the real schema (Path B)
 
 ## Goal

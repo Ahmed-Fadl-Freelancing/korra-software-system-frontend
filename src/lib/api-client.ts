@@ -147,12 +147,13 @@ class ApiClient {
     return this.request<T>(path, { method: "DELETE" });
   }
 
+  // Supabase Storage's signed-upload-url endpoint expects the file as multipart form-data
+  // under the "file" field (matches supabase-py's upload_to_signed_url) — not a raw binary
+  // body. Don't set Content-Type manually: fetch computes the multipart boundary itself.
   async uploadToSignedUrl(signedUrl: string, file: File): Promise<void> {
-    const res = await fetch(signedUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
+    const body = new FormData();
+    body.append("file", file);
+    const res = await fetch(signedUrl, { method: "PUT", body });
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
   }
 }
