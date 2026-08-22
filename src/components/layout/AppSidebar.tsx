@@ -24,8 +24,8 @@ export function AppSidebar() {
 
   if (!user) return null;
 
-  const isSales = hasDepartment("sales");
-  const isTech = hasDepartment("tech_office");
+  const isSales = hasDepartment("Sales");
+  const isTech = hasDepartment("Tech Office");
 
   const commonItems: NavItem[] = [
     { title: "Inbox", url: "/app/inbox", icon: Inbox },
@@ -44,7 +44,7 @@ export function AppSidebar() {
   const techItems: NavItem[] = isTech
     ? [
         { title: "Tech Dashboard", url: "/app/tech", icon: Layers },
-        ...(hasRole("engineer") ? [{ title: "Engineering Workbench", url: "/app/engineering", icon: Wrench }] : []),
+        ...(hasRole("tech_engineer") ? [{ title: "Engineering Workbench", url: "/app/engineering", icon: Wrench }] : []),
         { title: "Model Shortlists", url: "/app/shortlists", icon: ClipboardList },
         { title: "Pricing Queue", url: "/app/pricing", icon: DollarSign },
       ]
@@ -83,8 +83,8 @@ export function AppSidebar() {
         {!collapsed && (
           <div className="px-4 py-3">
             <h2 className="text-sm font-bold tracking-tight text-foreground">Platform</h2>
-            <p className="text-[11px] text-muted-foreground capitalize">
-              {user.department.name.replace("_", " ")} Department
+            <p className="text-[11px] text-muted-foreground">
+              {user.department ? `${user.department.name} Department` : "Unassigned"}
             </p>
           </div>
         )}

@@ -42,11 +42,11 @@
 
 | # | Tag | Task | Status |
 |---|-----|------|--------|
-| 117 | [FE] | `GET /me` — call after login/signup; populate AuthContext with real profile | `[ ]` |
-| 118 | [FE] | AuthContext — replace null stubs with real `user`, `hasDepartment`, `hasRole`, `isManager`, `departmentName` | `[ ]` |
-| 119 | [FE] | `DepartmentRedirect` — wire back into `/app` index route; Sales → `/app/sales`, Tech Office → `/app/tech`, null → `/pending` | `[ ]` |
-| 120 | [FE] | `ProtectedRoute` — restore department null guard + role/section guards (removed in KOR-53) | `[ ]` |
-| 121 | [FE] | Topbar — display `full_name`, department badge, `isManager` badge from AuthContext | `[ ]` |
+| 117 | [FE] | `GET /me` — call after login/signup; populate AuthContext with real profile | `[x]` |
+| 118 | [FE] | AuthContext — replace null stubs with real `user`, `hasDepartment`, `hasRole`, `isManager`, `departmentName` | `[x]` |
+| 119 | [FE] | `DepartmentRedirect` — wire back into `/app` index route; Sales → `/app/sales`, Tech Office → `/app/tech`, null → `/pending` | `[x]` |
+| 120 | [FE] | `ProtectedRoute` — restore department null guard + role/section guards (removed in KOR-53) | `[x]` |
+| 121 | [FE] | Topbar — display `full_name`, department badge, `isManager` badge from AuthContext | `[x]` |
 
 ---
 

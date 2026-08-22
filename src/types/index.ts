@@ -18,15 +18,19 @@ export interface Department {
   name: DepartmentName;
 }
 
-export interface UserProfile {
+// The literal GET /me response contract (PROJECT_FLOW.md §2.4) — no email or job_title;
+// those aren't returned by this endpoint (email comes from the JWT instead, see AuthContext).
+export interface MeResponse {
   user_id: string;
-  email: string;
   employee_code: string;
   full_name: string;
-  job_title: string | null;
-  is_active: boolean;
   department: Department | null;
   roles: RoleCode[];
+}
+
+// App-internal profile shape: MeResponse plus the email claim read from the JWT.
+export interface UserProfile extends MeResponse {
+  email: string;
 }
 
 // ─── Projects (shown as "Opportunities" in UI) ────────────────────────────────

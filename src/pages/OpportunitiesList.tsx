@@ -32,7 +32,7 @@ export default function OpportunitiesList() {
           <h1 className="text-2xl font-bold tracking-tight">Opportunities</h1>
           <p className="text-sm text-muted-foreground">{opportunities.length} total opportunities</p>
         </div>
-        {hasDepartment("sales") && (
+        {hasDepartment("Sales") && (
           <Button onClick={() => navigate("/app/opportunities/new")} className="gap-2">
             <PlusCircle className="h-4 w-4" />
             New Opportunity
@@ -47,8 +47,8 @@ export default function OpportunitiesList() {
           icon={FolderOpen}
           title="No opportunities yet"
           description="Create your first opportunity to get started with the pipeline."
-          actionLabel={hasDepartment("sales") ? "Create Opportunity" : undefined}
-          onAction={hasDepartment("sales") ? () => navigate("/app/opportunities/new") : undefined}
+          actionLabel={hasDepartment("Sales") ? "Create Opportunity" : undefined}
+          onAction={hasDepartment("Sales") ? () => navigate("/app/opportunities/new") : undefined}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

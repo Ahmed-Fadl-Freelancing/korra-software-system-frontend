@@ -4,9 +4,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { RoleGuard } from "@/components/RoleGuard";
+import { DepartmentRedirect } from "@/components/DepartmentRedirect";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import PendingActivation from "@/pages/PendingActivation";
 import Inbox from "@/pages/Inbox";
 import CreateOpportunity from "@/pages/CreateOpportunity";
 import OpportunityDetail from "@/pages/OpportunityDetail";
@@ -28,6 +31,14 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route
+              path="/pending"
+              element={
+                <ProtectedRoute>
+                  <PendingActivation />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/" element={<Navigate to="/app" replace />} />
 
             <Route
@@ -38,25 +49,39 @@ const App = () => (
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/app/sales" replace />} />
+              <Route index element={<DepartmentRedirect />} />
               <Route path="inbox" element={<Inbox />} />
               <Route path="opportunities" element={<OpportunitiesList />} />
               <Route path="opportunities/new" element={<CreateOpportunity />} />
               <Route path="opportunities/:id" element={<OpportunityDetail />} />
 
               {/* Sales */}
-              <Route path="sales" element={<SalesDashboard />} />
+              <Route
+                path="sales"
+                element={
+                  <RoleGuard department="Sales" fallback={<DepartmentRedirect />}>
+                    <SalesDashboard />
+                  </RoleGuard>
+                }
+              />
               <Route path="offers" element={<PlaceholderPage title="Offers" description="Manage and track offer documents sent to clients." />} />
               <Route path="outcomes" element={<PlaceholderPage title="Outcomes" description="Track awarded and lost opportunities." />} />
 
               {/* Tech Office */}
-              <Route path="tech" element={<TechDashboard />} />
+              <Route
+                path="tech"
+                element={
+                  <RoleGuard department="Tech Office" fallback={<DepartmentRedirect />}>
+                    <TechDashboard />
+                  </RoleGuard>
+                }
+              />
               <Route
                 path="engineering"
                 element={
-                  <ProtectedRoute>
+                  <RoleGuard department="Tech Office" roles={["tech_engineer"]} fallback={<DepartmentRedirect />}>
                     <Engineering />
-                  </ProtectedRoute>
+                  </RoleGuard>
                 }
               />
               <Route path="shortlists" element={<PlaceholderPage title="Model Shortlists" description="View and manage shortlisted models for opportunities." />} />

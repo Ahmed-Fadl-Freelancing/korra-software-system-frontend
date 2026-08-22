@@ -45,7 +45,7 @@ export default function OpportunityDetail() {
   if (loading) return <DetailSkeleton />;
   if (!opp) return <p className="text-sm text-muted-foreground">Opportunity not found.</p>;
 
-  const isSales = hasDepartment("sales");
+  const isSales = hasDepartment("Sales");
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">

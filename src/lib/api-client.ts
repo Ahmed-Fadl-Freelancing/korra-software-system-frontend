@@ -35,6 +35,21 @@ class ApiClient {
     localStorage.removeItem(TOKEN_KEYS.REFRESH);
   }
 
+  // GET /me doesn't return email (PROJECT_FLOW.md §2.4) — read it from the JWT's own claims instead.
+  getEmailFromToken(): string | null {
+    const token = this.getAccessToken();
+    if (!token) return null;
+    try {
+      const payload = token.split(".")[1];
+      const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+      const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+      const claims = JSON.parse(atob(padded));
+      return typeof claims.email === "string" ? claims.email : null;
+    } catch {
+      return null;
+    }
+  }
+
   private async tryRefresh(): Promise<boolean> {
     const refresh = localStorage.getItem(TOKEN_KEYS.REFRESH);
     if (!refresh || refresh === "null" || refresh === "undefined") return false;

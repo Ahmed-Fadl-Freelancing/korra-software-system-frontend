@@ -38,7 +38,7 @@ export default function TechDashboard() {
           <h1 className="text-2xl font-bold tracking-tight">Tech Office Dashboard</h1>
           <p className="text-sm text-muted-foreground">Engineering queue and verification pipeline</p>
         </div>
-        {hasRole("engineer") && (
+        {hasRole("tech_engineer") && (
           <Button onClick={() => navigate("/app/engineering")} className="gap-2">
             <Wrench className="h-4 w-4" />
             Engineering Workbench

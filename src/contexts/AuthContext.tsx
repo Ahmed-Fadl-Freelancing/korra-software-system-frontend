@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { apiClient } from "@/lib/api-client";
-import { UserProfile, DepartmentName, JobTitleLevel } from "@/types";
+import { UserProfile, MeResponse, DepartmentName, JobTitleLevel } from "@/types";
 
 interface AuthError {
   message: string;
@@ -9,8 +9,6 @@ interface AuthError {
 interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
-  // user/role fields kept for interface compatibility — populated by the
-  // department branch (GET /me). Until then they return null/false stubs.
   user: UserProfile | null;
   isStubMode: boolean;
   hasDepartment: (dept: DepartmentName) => boolean;
@@ -38,16 +36,39 @@ const AuthContext = createContext<AuthState>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// Fetches GET /me and merges in the email claim from the JWT (GET /me itself doesn't return email).
+// Returns null on any failure — a 401 that survives apiClient's own refresh attempt already clears
+// the stored tokens as a side effect, which the caller checks for via apiClient.getAccessToken().
+async function fetchProfile(): Promise<UserProfile | null> {
+  try {
+    const data = await apiClient.get<MeResponse>("/me");
+    return { ...data, email: apiClient.getEmailFromToken() ?? "" };
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>(null);
 
-  // On mount: if a valid token exists in localStorage, mark as authenticated.
-  // No /me call — profile hydration is handled by the department branch.
+  // On mount: if a token exists, mark authenticated and hydrate the real profile via GET /me.
   useEffect(() => {
     const token = apiClient.getAccessToken();
-    if (token) setIsAuthenticated(true);
-    setLoading(false);
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    setIsAuthenticated(true);
+    fetchProfile()
+      .then(setUser)
+      .finally(() => {
+        // apiClient clears tokens itself on an unrecoverable 401 — reflect that here so a dead
+        // token doesn't leave the app stuck thinking it's authenticated with no profile.
+        if (!apiClient.getAccessToken()) setIsAuthenticated(false);
+        setLoading(false);
+      });
   }, []);
 
   const signIn = async (email: string, password: string): Promise<AuthError | null> => {
@@ -61,9 +82,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       apiClient.setTokens(data.access_token, data.refresh_token);
       setIsAuthenticated(true);
+      setUser(await fetchProfile());
       return null;
-    } catch (err: any) {
-      return { message: err.message || "Login failed" };
+    } catch (err) {
+      return { message: err instanceof Error ? err.message : "Login failed" };
     }
   };
 
@@ -93,12 +115,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.user?.access_token) {
         apiClient.setTokens(data.user.access_token, data.user.refresh_token);
         setIsAuthenticated(true);
+        setUser(await fetchProfile());
         return { error: null, needsConfirmation: false };
       }
 
       return { error: null, needsConfirmation: true };
-    } catch (err: any) {
-      return { error: { message: err.message || "Signup failed" }, needsConfirmation: false };
+    } catch (err) {
+      return { error: { message: err instanceof Error ? err.message : "Signup failed" }, needsConfirmation: false };
     }
   };
 
@@ -108,20 +131,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       apiClient.clearTokens();
       setIsAuthenticated(false);
+      setUser(null);
       window.location.href = "/login";
     }
   };
+
+  const hasDepartment = (dept: DepartmentName) => user?.department?.name === dept;
+  const hasRole = (role: string) => user?.roles.some((r) => r === role) ?? false;
+  const isManager = user?.roles.includes("manager") ?? false;
+  const departmentName = user?.department?.name ?? null;
 
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
       loading,
-      user: null,
+      user,
       isStubMode: false,
-      hasDepartment: () => false,
-      hasRole: () => false,
-      isManager: false,
-      departmentName: null,
+      hasDepartment,
+      hasRole,
+      isManager,
+      departmentName,
       signIn,
       signUp,
       signOut,

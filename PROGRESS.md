@@ -9,7 +9,11 @@
 >
 > Linear: Team **Korrra** (key `KOR`). One PR **per feature (milestone group)**, never per issue.
 > Branch convention (new work): **`feat/<Name>`** (e.g. `feat/Auth`).
-> Last updated: 2026-06-16 — KOR-53 merged to main (PR #3). KOR-117–121 created for User Profile & Department Routing, status: In Progress. Branch: feat/UserProfile
+> Last updated: 2026-08-22 — KOR-117–121 (User Profile & Department Routing) implemented on
+> `feat/UserProfile`: AuthContext now calls `GET /me` for real, `DepartmentRedirect`/`RoleGuard` are
+> wired into routing, and the hardcoded department/role string mismatches are fixed. Day-to-day
+> workstream sequencing now lives in `korra-project/PLAN.md` (shared workspace, kept in sync with
+> the backend repo) — see it for what's next and each task's `tasks/NNN-*.md` for full detail.
 >
 > **Brand:** Card palette = Blue · White · Silver. All UI must follow this. See `ISSUES.md` → Brand Identity for exact tokens.
 
@@ -17,9 +21,9 @@
 
 ## ▶ NEXT UP
 
-| Repo | Issue | Title | Branch | Status |
-|------|-------|-------|--------|--------|
-| **[FE]** | **KOR-117–121** | User Profile & Department Routing — GET /me, AuthContext profile, DepartmentRedirect, ProtectedRoute guards, Topbar | `feat/UserProfile` | 🔧 In Progress |
+KOR-117–121 is done (see Milestone 2 below). Next-task sequencing now lives in
+`korra-project/PLAN.md` — read it for the prioritized workstream order, and read the relevant
+`tasks/NNN-*.md` file in this repo (or the backend repo) in full before starting any task.
 
 ---
 
@@ -38,11 +42,11 @@
 | [BE] | KOR-116 | `POST /auth/refresh` — refresh-token grant | 🔧 In Review (PR #2) |
 | [FE] | KOR-53 | Auth foundation — Backend Proxy (`/auth/*`), `AuthContext`, signIn/signUp/signOut | ✅ Done (merged) |
 | [FE] | KOR-54 | App Layout — AppLayout, AppSidebar, Topbar skeleton | ✅ Done |
-| [FE] | KOR-117 | GET /me — restore user profile fetch after login | 🔧 In Progress |
-| [FE] | KOR-118 | AuthContext — expose user profile, hasDepartment, hasRole, departmentName | 🔧 In Progress |
-| [FE] | KOR-119 | Department-based routing — /app → /app/sales or /app/tech | 🔧 In Progress |
-| [FE] | KOR-120 | ProtectedRoute — department null guard + role/section guards | 🔧 In Progress |
-| [FE] | KOR-121 | Topbar — display user full_name, department badge, manager badge | 🔧 In Progress |
+| [FE] | KOR-117 | GET /me — restore user profile fetch after login | ✅ Done |
+| [FE] | KOR-118 | AuthContext — expose user profile, hasDepartment, hasRole, departmentName | ✅ Done |
+| [FE] | KOR-119 | Department-based routing — /app → /app/sales or /app/tech | ✅ Done |
+| [FE] | KOR-120 | ProtectedRoute — department null guard + role/section guards | ✅ Done |
+| [FE] | KOR-121 | Topbar — display user full_name, department badge, manager badge | ✅ Done |
 
 > **Architecture note:** Django never mints its own JWT. The `/auth/*` endpoints
 > forward credentials to **Supabase Auth (GoTrue)**; Supabase issues the

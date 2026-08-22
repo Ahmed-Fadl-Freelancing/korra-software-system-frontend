@@ -15,9 +15,11 @@ export function Topbar() {
       <div className="flex items-center gap-3">
         {user && (
           <>
-            <Badge variant="secondary" className="text-xs capitalize">
-              {user.department.name.replace("_", " ")}
-            </Badge>
+            {user.department && (
+              <Badge variant="secondary" className="text-xs">
+                {user.department.name}
+              </Badge>
+            )}
             {isManager && (
               <Badge variant="outline" className="gap-1 text-xs">
                 <Shield className="h-3 w-3" />
@@ -26,7 +28,7 @@ export function Topbar() {
             )}
             <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
               <User className="h-3.5 w-3.5" />
-              {user.name}
+              {user.full_name}
             </span>
           </>
         )}
