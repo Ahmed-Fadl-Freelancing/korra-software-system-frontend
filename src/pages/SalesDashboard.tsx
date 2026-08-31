@@ -1,39 +1,26 @@
-import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { apiClient } from "@/lib/api-client";
 import { stubTasks, stubOpportunities } from "@/lib/stub-data";
-import { Task, Opportunity } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { KpiCard } from "@/components/ui/kpi-card";
-import { KpiSkeleton, CardListSkeleton } from "@/components/ui/page-skeleton";
 import { TaskCard } from "@/components/TaskCard";
 import { ManagerWidgets } from "@/components/dashboard/ManagerWidgets";
-import { LinearIssuesWidget } from "@/components/dashboard/LinearIssuesWidget";
+import { PipelineTrendCard } from "@/components/dashboard/PipelineTrendCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   FolderOpen, Clock, FileCheck, Trophy, PlusCircle, ArrowRight, Inbox as InboxIcon,
 } from "lucide-react";
 
+// Dashboard runs on stub data for now, deliberately -- no /tasks or /opportunities calls here yet.
+// Swap these two lines for real fetches when the Opportunity section work wires this page up for real.
+const tasks = stubTasks;
+const opps = stubOpportunities;
+
 export default function SalesDashboard() {
   const navigate = useNavigate();
   const { isManager } = useAuth();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [opps, setOpps] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.allSettled([
-      apiClient.get<{ tasks: Task[] }>("/tasks").then((res) => res.tasks).catch(() => stubTasks),
-      apiClient.get<Opportunity[]>("/opportunities").catch(() => stubOpportunities),
-    ]).then(([t, o]) => {
-      setTasks((t as any).value || stubTasks);
-      setOpps((o as any).value || stubOpportunities);
-      setLoading(false);
-    });
-  }, []);
 
   const urgentTasks = tasks
     .filter((t) => t.priority === "urgent" || t.priority === "high")
@@ -53,22 +40,18 @@ export default function SalesDashboard() {
       </div>
 
       {/* KPI Strip */}
-      {loading ? (
-        <KpiSkeleton />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="Open Opportunities" value={opps.length} icon={FolderOpen} trend="+2 this week" />
-          <KpiCard label="Waiting on Tech" value={1} icon={Clock} />
-          <KpiCard label="Offers Ready" value={0} icon={FileCheck} />
-          <KpiCard label="Awarded This Month" value={0} icon={Trophy} />
-        </div>
-      )}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <KpiCard label="Open Opportunities" value={opps.length} icon={FolderOpen} trend="+2 this week" trendDirection="up" />
+        <KpiCard label="Waiting on Tech" value={1} icon={Clock} trend="Same as last week" trendDirection="flat" />
+        <KpiCard label="Offers Ready" value={2} icon={FileCheck} trend="+2 this week" trendDirection="up" />
+        <KpiCard label="Awarded This Month" value={1} icon={Trophy} trend="-1 vs last month" trendDirection="down" />
+      </div>
+
+      {/* Pipeline Trend */}
+      <PipelineTrendCard />
 
       {/* Manager Widgets */}
       {isManager && <ManagerWidgets />}
-
-      {/* Linear Issues */}
-      <LinearIssuesWidget />
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Urgent Tasks */}
@@ -79,9 +62,7 @@ export default function SalesDashboard() {
               View all <ArrowRight className="h-3 w-3" />
             </Button>
           </div>
-          {loading ? (
-            <CardListSkeleton count={2} />
-          ) : urgentTasks.length === 0 ? (
+          {urgentTasks.length === 0 ? (
             <EmptyState
               icon={InboxIcon}
               title="All clear"
@@ -104,9 +85,7 @@ export default function SalesDashboard() {
               View all <ArrowRight className="h-3 w-3" />
             </Button>
           </div>
-          {loading ? (
-            <CardListSkeleton count={2} />
-          ) : opps.length === 0 ? (
+          {opps.length === 0 ? (
             <EmptyState
               icon={FolderOpen}
               title="No opportunities"
