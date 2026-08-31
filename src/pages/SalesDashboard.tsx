@@ -26,7 +26,7 @@ export default function SalesDashboard() {
 
   useEffect(() => {
     Promise.allSettled([
-      apiClient.get<Task[]>("/tasks").catch(() => stubTasks),
+      apiClient.get<{ tasks: Task[] }>("/tasks").then((res) => res.tasks).catch(() => stubTasks),
       apiClient.get<Opportunity[]>("/opportunities").catch(() => stubOpportunities),
     ]).then(([t, o]) => {
       setTasks((t as any).value || stubTasks);
