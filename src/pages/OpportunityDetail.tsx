@@ -1,14 +1,11 @@
-import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "@/lib/api-client";
 import { stubOpportunities } from "@/lib/stub-data";
-import { Opportunity } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { RoleGuard } from "@/components/RoleGuard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DetailSkeleton } from "@/components/ui/page-skeleton";
 import { Timeline } from "@/components/opportunity/Timeline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -19,19 +16,9 @@ import {
 export default function OpportunityDetail() {
   const { id } = useParams<{ id: string }>();
   const { hasDepartment } = useAuth();
-  const [opp, setOpp] = useState<Opportunity | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    apiClient
-      .get<Opportunity>(`/opportunities/${id}`)
-      .then(setOpp)
-      .catch(() => {
-        const stub = stubOpportunities.find((o) => o.id === id) || stubOpportunities[0];
-        setOpp(stub);
-      })
-      .finally(() => setLoading(false));
-  }, [id]);
+  // Runs on stub data for now, deliberately -- no /opportunities/:id call here yet, same reason
+  // as OpportunitiesList.tsx. Swap for a real fetch when the Opportunity section work happens.
+  const opp = stubOpportunities.find((o) => o.id === id) || stubOpportunities[0];
 
   const handleDownload = async (docId: string) => {
     try {
@@ -42,7 +29,6 @@ export default function OpportunityDetail() {
     }
   };
 
-  if (loading) return <DetailSkeleton />;
   if (!opp) return <p className="text-sm text-muted-foreground">Opportunity not found.</p>;
 
   const isSales = hasDepartment("sales");

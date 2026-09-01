@@ -1,30 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as linearClient from "@/lib/linear-client";
-import { LinearIssue, LinearPriority } from "@/types";
+import { LinearPriority } from "@/types";
 
 const QUERY_KEY = ["linear", "issues"] as const;
 const TEAM_KEY = "KOR";
-
-// ---------------------------------------------------------------------------
-// Fetch issues
-// ---------------------------------------------------------------------------
-
-export function useLinearIssues(statusFilter?: string) {
-  return useQuery({
-    queryKey: [...QUERY_KEY, statusFilter ?? "all"],
-    queryFn: async () => {
-      const issues = await linearClient.fetchIssues(TEAM_KEY);
-      if (statusFilter) {
-        return issues.filter((i: any) =>
-          statusFilter.split(",").includes(i.state.name)
-        );
-      }
-      return issues;
-    },
-    staleTime: 60_000,
-    retry: 1,
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Create issue

@@ -14,8 +14,8 @@ export default function Inbox() {
 
   useEffect(() => {
     apiClient
-      .get<Task[]>("/tasks")
-      .then(setTasks)
+      .get<{ tasks: Task[] }>("/tasks")
+      .then((res) => setTasks(res.tasks))
       .catch(() => setTasks(stubTasks))
       .finally(() => setLoading(false));
   }, []);

@@ -1,5 +1,5 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { apiClient } from "@/lib/api-client";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { apiClient, ApiAuthError } from "@/lib/api-client";
 import { UserProfile, DepartmentName, JobTitleLevel } from "@/types";
 
 interface AuthError {
@@ -9,8 +9,6 @@ interface AuthError {
 interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
-  // user/role fields kept for interface compatibility — populated by the
-  // department branch (GET /me). Until then they return null/false stubs.
   user: UserProfile | null;
   isStubMode: boolean;
   hasDepartment: (dept: DepartmentName) => boolean;
@@ -38,17 +36,63 @@ const AuthContext = createContext<AuthState>({
 
 export const useAuth = () => useContext(AuthContext);
 
+const STUB_USER: UserProfile = {
+  user_id: "stub-user-id",
+  email: "demo@example.com",
+  employee_code: "EMP-STUB",
+  full_name: "Demo User",
+  job_title: null,
+  is_active: true,
+  department: { id: "dept-1", name: "Sales" },
+  roles: ["sales_engineer", "manager"],
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isStubMode, setIsStubMode] = useState(false);
 
-  // On mount: if a valid token exists in localStorage, mark as authenticated.
-  // No /me call — profile hydration is handled by the department branch.
+  /**
+   * Calls GET /me and populates user state.
+   *
+   * stubOnNetworkError=true  → backend-down falls back to stub (used on app mount)
+   * stubOnNetworkError=false → auth/network failures propagate (used after login)
+   */
+  const fetchUserProfile = useCallback(async (stubOnNetworkError = false) => {
+    try {
+      const profile = await apiClient.get<UserProfile>("/me");
+      setUser(profile);
+      setIsAuthenticated(true);
+      setIsStubMode(false);
+    } catch (err: unknown) {
+      if (err instanceof ApiAuthError) {
+        throw err;
+      }
+      if (stubOnNetworkError) {
+        console.warn("GET /me unreachable — using stub profile for dev");
+        setUser(STUB_USER);
+        setIsAuthenticated(true);
+        setIsStubMode(true);
+      } else {
+        throw err;
+      }
+    }
+  }, []);
+
+  // On mount: if token exists, validate it via GET /me
   useEffect(() => {
     const token = apiClient.getAccessToken();
-    if (token) setIsAuthenticated(true);
-    setLoading(false);
-  }, []);
+    if (token) {
+      fetchUserProfile(true).catch(() => {
+        apiClient.clearTokens();
+        setIsAuthenticated(false);
+        setUser(null);
+      }).finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, [fetchUserProfile]);
 
   const signIn = async (email: string, password: string): Promise<AuthError | null> => {
     try {
@@ -60,9 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { message: "Login succeeded but no token was returned. Please try again." };
       }
       apiClient.setTokens(data.access_token, data.refresh_token);
-      setIsAuthenticated(true);
+      await fetchUserProfile(false);
       return null;
     } catch (err: any) {
+      if (err instanceof ApiAuthError) {
+        apiClient.clearTokens();
+        return { message: "Login succeeded but your profile could not be loaded. Please try again." };
+      }
       return { message: err.message || "Login failed" };
     }
   };
@@ -92,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // then remove the if-block below — the needsConfirmation=true path takes over.
       if (data.user?.access_token) {
         apiClient.setTokens(data.user.access_token, data.user.refresh_token);
-        setIsAuthenticated(true);
+        await fetchUserProfile(false);
         return { error: null, needsConfirmation: false };
       }
 
@@ -108,20 +156,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       apiClient.clearTokens();
       setIsAuthenticated(false);
+      setUser(null);
       window.location.href = "/login";
     }
   };
+
+  const hasDepartment = (dept: DepartmentName) => user?.department?.name === dept;
+  const hasRole = (role: string) => user?.roles.includes(role as any) ?? false;
+  const isManager = user?.roles.includes("manager") ?? false;
+  const departmentName = user?.department?.name ?? null;
 
   return (
     <AuthContext.Provider value={{
       isAuthenticated,
       loading,
-      user: null,
-      isStubMode: false,
-      hasDepartment: () => false,
-      hasRole: () => false,
-      isManager: false,
-      departmentName: null,
+      user,
+      isStubMode,
+      hasDepartment,
+      hasRole,
+      isManager,
+      departmentName,
       signIn,
       signUp,
       signOut,

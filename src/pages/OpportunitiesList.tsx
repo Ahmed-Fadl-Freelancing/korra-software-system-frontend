@@ -1,29 +1,21 @@
-import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiClient } from "@/lib/api-client";
 import { stubOpportunities } from "@/lib/stub-data";
-import { Opportunity } from "@/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CardListSkeleton } from "@/components/ui/page-skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { FolderOpen, PlusCircle, FileText } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Runs on stub data for now, deliberately -- no /opportunities call here yet. The real endpoint
+// now returns the new Project shape (name, contractor: {id,name}|null, no documents field), which
+// this page hasn't been updated to read. Swap for a real fetch when the Opportunity section work
+// reconciles this page with that shape.
+const opportunities = stubOpportunities;
+
 export default function OpportunitiesList() {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { hasDepartment } = useAuth();
-
-  useEffect(() => {
-    apiClient
-      .get<Opportunity[]>("/opportunities")
-      .then(setOpportunities)
-      .catch(() => setOpportunities(stubOpportunities))
-      .finally(() => setLoading(false));
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -40,9 +32,7 @@ export default function OpportunitiesList() {
         )}
       </div>
 
-      {loading ? (
-        <CardListSkeleton count={6} />
-      ) : opportunities.length === 0 ? (
+      {opportunities.length === 0 ? (
         <EmptyState
           icon={FolderOpen}
           title="No opportunities yet"

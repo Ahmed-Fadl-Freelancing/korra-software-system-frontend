@@ -28,43 +28,6 @@ async function gql(query: string, variables?: Record<string, any>): Promise<any>
   return body.data || {};
 }
 
-export const GET_ISSUES = `
-  query GetIssues($teamKey: String!) {
-    issues(
-      filter: { team: { key: { eq: $teamKey } } }
-      orderBy: updatedAt
-    ) {
-      nodes {
-        id
-        identifier
-        title
-        description
-        priority
-        url
-        createdAt
-        updatedAt
-        state {
-          id
-          name
-          type
-        }
-        assignee {
-          id
-          name
-          email
-        }
-        labels {
-          nodes {
-            id
-            name
-            color
-          }
-        }
-      }
-    }
-  }
-`;
-
 export const CREATE_ISSUE = `
   mutation CreateIssue($input: IssueCreateInput!) {
     issueCreate(input: $input) {
@@ -114,11 +77,6 @@ export const GET_TEAM_STATES = `
     }
   }
 `;
-
-export async function fetchIssues(teamKey: string) {
-  const data = await gql(GET_ISSUES, { teamKey });
-  return data.issues?.nodes || [];
-}
 
 export async function createLinearIssue(
   title: string,
